@@ -1,0 +1,28 @@
+# Godot 4.x
+.godot/
+*.translation
+
+# Screenshots & QA outputs
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+qa_capture_results.json
+scene_manifest.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Agent caches
+graphify-out/
+.agents/skills/gd-agentic-skills/
