@@ -44,7 +44,11 @@ def cmd_query(args):
                 
     if not found:
         print(f"No deprecation or syntax change found for '{keyword}' in the log.")
-        print("Note: Always use first-class signals and typed variables in Godot 4+.")
+        
+    print("\n--- Godot 4.x Engine Best Practices ---")
+    best_practices = data.get("engine_best_practices", {})
+    for k, v in best_practices.items():
+        print(f"[{k.upper()}]: {v}")
 
 def cmd_scan(args):
     """Scan a .gd file for deprecated Godot 3.x syntax."""

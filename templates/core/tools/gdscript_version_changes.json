@@ -25,6 +25,7 @@
     }
   ],
   "engine_best_practices": {
+    "ui_construction": "ALWAYS build UI in the Godot Editor (.tscn) using nodes (Containers, Buttons, Labels, Panels). NEVER instantiate UI elements via GDScript (e.g., Control.new(), Button.new()) unless it is for pure dynamic visual effects or interactive canvas math rendering. GDScript is for logic and data binding, NOT layout.",
     "nodes": "Favor typed node paths (e.g. @onready var label: Label = $Label)",
     "signals": "Use First-Class signals (e.g. button.pressed.connect(_on_pressed)) rather than strings.",
     "typing": "Enforce static typing for all function arguments and return types (e.g. func move(speed: float) -> void:)."
