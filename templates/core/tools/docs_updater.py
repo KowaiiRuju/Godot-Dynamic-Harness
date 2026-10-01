@@ -26,6 +26,10 @@ def load_changes() -> dict:
     with open(JSON_LOG, "r", encoding="utf-8") as f:
         return json.load(f)
 
+def save_changes(data: dict):
+    with open(JSON_LOG, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
 def cmd_query(args):
     """Query the JSON log for a specific keyword to check if it's deprecated."""
     data = load_changes()
@@ -107,6 +111,40 @@ def cmd_scan(args):
         print(f"❌ Found {issues} outdated syntax issues in {file_path.name}. Please update to Godot 4.x standards.")
         sys.exit(1)
 
+def cmd_learn(args):
+    """Dynamically append new context, syntax changes, or best practices to the JSON log."""
+    data = load_changes()
+    
+    if args.practice_key and args.practice_desc:
+        if "engine_best_practices" not in data:
+            data["engine_best_practices"] = {}
+        data["engine_best_practices"][args.practice_key] = args.practice_desc
+        save_changes(data)
+        print(f"✅ Learned new best practice: [{args.practice_key}] -> {args.practice_desc}")
+    elif args.syntax_old and args.syntax_new:
+        # Find or create a 'Dynamic Updates' migration block
+        migration_block = None
+        for m in data.get("version_migrations", []):
+            if m.get("from_version") == "Dynamic":
+                migration_block = m
+                break
+        if not migration_block:
+            migration_block = {"from_version": "Dynamic", "to_version": "Latest", "changes": []}
+            data.setdefault("version_migrations", []).append(migration_block)
+            
+        new_change = {
+            "old": args.syntax_old,
+            "new": args.syntax_new,
+            "type": "learned",
+            "context": args.syntax_context or "Dynamically learned during project development."
+        }
+        migration_block["changes"].append(new_change)
+        save_changes(data)
+        print(f"✅ Learned new syntax update: '{args.syntax_old}' -> '{args.syntax_new}'")
+    else:
+        print("❌ Invalid learn arguments. Provide either practice arguments or syntax arguments.")
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(description="GDScript Syntax Docs Checker")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -119,12 +157,22 @@ def main():
     p_scan = subparsers.add_parser("scan", help="Scan a .gd script for deprecated syntax")
     p_scan.add_argument("file", help="Path to the .gd file to scan")
 
+    # Learn
+    p_learn = subparsers.add_parser("learn", help="Add new context to the knowledge base")
+    p_learn.add_argument("--practice-key", help="Key name for the new best practice")
+    p_learn.add_argument("--practice-desc", help="Description of the best practice")
+    p_learn.add_argument("--syntax-old", help="Old deprecated syntax")
+    p_learn.add_argument("--syntax-new", help="New correct syntax")
+    p_learn.add_argument("--syntax-context", help="Context for the syntax change")
+
     args = parser.parse_args()
     
     if args.command == "query":
         cmd_query(args)
     elif args.command == "scan":
         cmd_scan(args)
+    elif args.command == "learn":
+        cmd_learn(args)
 
 if __name__ == "__main__":
     main()

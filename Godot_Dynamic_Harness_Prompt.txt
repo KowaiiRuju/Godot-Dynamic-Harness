@@ -104,6 +104,8 @@ Scaffold a general game CLI and runner under `core/tools/`:
    - `test [--suite <name>|--list]`: Discovers and executes test scripts under `tests/test_*.gd`, surfacing assertion failures and catching `SCRIPT ERROR` logs. Uses `--headless` since rendering is not required.
    - `validate`: Static validator that checks `.tscn` file integrity (detects broken `ExtResource` paths), audits GDScript for forbidden dynamic UI instantiations (`Control.new()`), and verifies deterministic mechanics (e.g. tracking `randi` vs seeded runs).
    - `syntax [--scan <dir>|--query <kw>]`: Validates GDScript files against the `gdscript_version_changes.json` log to prevent agents/devs from using deprecated Godot 3.x patterns (e.g., `yield`, `export var`). ALWAYS use this tool if you are unsure of the latest Godot 4.x syntax!
+   - `syntax [--learn-practice-key <key> --learn-practice-desc <desc>]`: AI Agents should use this to append dynamically learned best practices specific to the project or Godot version back into the JSON memory log.
+   - `syntax [--learn-syntax-old <old> --learn-syntax-new <new>]`: AI Agents should use this to append newly discovered syntax deprecations into the JSON memory log so future agents don't hallucinate it again.
    - `info`: Displays detected Godot executable, engine version, detected game genre, viewport resolutions, and discovered test count.
 
 3. **`tests/test_smoke.gd`** (`extends SceneTree`):

@@ -160,8 +160,15 @@ def cmd_syntax(args):
             sys.exit(1)
         else:
             print(f"✅ All {len(files_to_scan)} files passed syntax validation.")
+    elif args.learn_practice_key and args.learn_practice_desc:
+        subprocess.run([sys.executable, str(DOCS_UPDATER), "learn", "--practice-key", args.learn_practice_key, "--practice-desc", args.learn_practice_desc])
+    elif args.learn_syntax_old and args.learn_syntax_new:
+        cmd = [sys.executable, str(DOCS_UPDATER), "learn", "--syntax-old", args.learn_syntax_old, "--syntax-new", args.learn_syntax_new]
+        if args.learn_syntax_context:
+            cmd.extend(["--syntax-context", args.learn_syntax_context])
+        subprocess.run(cmd)
     else:
-        print("Please provide --query <keyword> or --scan <file_or_dir>.")
+        print("Please provide --query <keyword>, --scan <file_or_dir>, or the --learn-practice-* / --learn-syntax-* flags.")
 
 def main():
     parser = argparse.ArgumentParser(description="Godot Dynamic Harness CLI")
@@ -187,6 +194,11 @@ def main():
     p_syntax = subparsers.add_parser("syntax", help="Check files against the latest GDScript docs and version changes log")
     p_syntax.add_argument("--query", help="Query a specific keyword in the JSON log")
     p_syntax.add_argument("--scan", help="Scan a file or directory for deprecated Godot 3.x syntax")
+    p_syntax.add_argument("--learn-practice-key", help="Key name for a newly discovered best practice")
+    p_syntax.add_argument("--learn-practice-desc", help="Description of the best practice")
+    p_syntax.add_argument("--learn-syntax-old", help="Old deprecated syntax to learn")
+    p_syntax.add_argument("--learn-syntax-new", help="New correct syntax to learn")
+    p_syntax.add_argument("--learn-syntax-context", help="Context for the syntax change")
 
     args = parser.parse_args()
     if not args.command or args.command == "info":
