@@ -13,6 +13,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 CORE_RUNNER = PROJECT_ROOT / "core" / "tools" / "scene_runner.gd"
+DOCS_UPDATER = PROJECT_ROOT / "core" / "tools" / "docs_updater.py"
 DEFAULT_SCREENSHOT_DIR = PROJECT_ROOT / "screenshots" / "debug"
 PROFILE_NAME = "godot_dynamic_harness_profile"
 
@@ -132,6 +133,36 @@ def cmd_validate(args):
     else:
         print(f"❌ Found {violations} UI rule violations.")
 
+def cmd_syntax(args):
+    print("=== GDScript Syntax & Version Checking ===")
+    if not DOCS_UPDATER.exists():
+        print(f"Error: {DOCS_UPDATER.name} tool is missing.")
+        sys.exit(1)
+    
+    if args.query:
+        subprocess.run([sys.executable, str(DOCS_UPDATER), "query", args.query])
+    elif args.scan:
+        scan_target = Path(args.scan)
+        if scan_target.is_file():
+            files_to_scan = [scan_target]
+        else:
+            files_to_scan = list(scan_target.rglob("*.gd"))
+            
+        failed = 0
+        for f in files_to_scan:
+            result = subprocess.run([sys.executable, str(DOCS_UPDATER), "scan", str(f)], capture_output=True, text=True)
+            if result.returncode != 0:
+                print(result.stdout)
+                failed += 1
+        
+        if failed > 0:
+            print(f"❌ Found outdated Godot 3.x syntax in {failed} files.")
+            sys.exit(1)
+        else:
+            print(f"✅ All {len(files_to_scan)} files passed syntax validation.")
+    else:
+        print("Please provide --query <keyword> or --scan <file_or_dir>.")
+
 def main():
     parser = argparse.ArgumentParser(description="Godot Dynamic Harness CLI")
     subparsers = parser.add_subparsers(dest="command")
@@ -151,6 +182,11 @@ def main():
 
     # validate
     subparsers.add_parser("validate", help="Audit project for Scene-First UI rules")
+    
+    # syntax
+    p_syntax = subparsers.add_parser("syntax", help="Check files against the latest GDScript docs and version changes log")
+    p_syntax.add_argument("--query", help="Query a specific keyword in the JSON log")
+    p_syntax.add_argument("--scan", help="Scan a file or directory for deprecated Godot 3.x syntax")
 
     args = parser.parse_args()
     if not args.command or args.command == "info":
@@ -161,6 +197,8 @@ def main():
         cmd_test(args)
     elif args.command == "validate":
         cmd_validate(args)
+    elif args.command == "syntax":
+        cmd_syntax(args)
 
 if __name__ == "__main__":
     main()

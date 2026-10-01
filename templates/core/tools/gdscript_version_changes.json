@@ -1,0 +1,32 @@
+{
+  "version_migrations": [
+    {
+      "from_version": "3.x",
+      "to_version": "4.x",
+      "changes": [
+        { "old": "export var", "new": "@export var", "type": "keyword", "context": "Variable exports now use annotations." },
+        { "old": "onready var", "new": "@onready var", "type": "keyword", "context": "Onready initialization uses annotations." },
+        { "old": "yield(get_tree().create_timer(time), \"timeout\")", "new": "await get_tree().create_timer(time).timeout", "type": "syntax", "context": "Coroutines use async/await syntax." },
+        { "old": "func _ready():", "new": "func _ready() -> void:", "type": "best_practice", "context": "Return types are highly recommended in 4.x." },
+        { "old": "change_scene", "new": "change_scene_to_file", "type": "method", "context": "SceneTree methods were renamed for clarity." },
+        { "old": ".instance()", "new": ".instantiate()", "type": "method", "context": "PackedScene instantiation method renamed." },
+        { "old": "rand_range", "new": "randf_range", "type": "method", "context": "Global math functions clarify types (float vs int)." },
+        { "old": "File.new()", "new": "FileAccess.open()", "type": "class", "context": "File handling was refactored into static methods on FileAccess." },
+        { "old": "Directory.new()", "new": "DirAccess.open()", "type": "class", "context": "Directory handling was refactored into static methods on DirAccess." },
+        { "old": "OS.get_unix_time()", "new": "Time.get_unix_time_from_system()", "type": "class", "context": "Time functions were moved from OS to a dedicated Time singleton." }
+      ]
+    },
+    {
+      "from_version": "4.0",
+      "to_version": "4.7",
+      "changes": [
+        { "old": "PackedDataContainer", "new": "Removed or changed in later 4.x versions", "type": "deprecation", "context": "Check latest docs for data container practices." }
+      ]
+    }
+  ],
+  "engine_best_practices": {
+    "nodes": "Favor typed node paths (e.g. @onready var label: Label = $Label)",
+    "signals": "Use First-Class signals (e.g. button.pressed.connect(_on_pressed)) rather than strings.",
+    "typing": "Enforce static typing for all function arguments and return types (e.g. func move(speed: float) -> void:)."
+  }
+}

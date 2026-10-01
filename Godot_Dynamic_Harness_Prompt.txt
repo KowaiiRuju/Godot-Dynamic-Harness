@@ -103,6 +103,7 @@ Scaffold a general game CLI and runner under `core/tools/`:
    - `capture --scene <path>`: Renders offscreen screenshots of any `.tscn` scene. Uses an isolated APPDATA profile (`<project>_godot_qa_profile`) so running terminal captures never freezes or conflicts with an open Godot Editor. For Godot 4.7 on Windows, avoid `--headless` for UI captures; use `--rendering-method gl_compatibility --audio-driver Dummy` with an isolated APPDATA to ensure proper rendering without crashing.
    - `test [--suite <name>|--list]`: Discovers and executes test scripts under `tests/test_*.gd`, surfacing assertion failures and catching `SCRIPT ERROR` logs. Uses `--headless` since rendering is not required.
    - `validate`: Static validator that checks `.tscn` file integrity (detects broken `ExtResource` paths), audits GDScript for forbidden dynamic UI instantiations (`Control.new()`), and verifies deterministic mechanics (e.g. tracking `randi` vs seeded runs).
+   - `syntax [--scan <dir>|--query <kw>]`: Validates GDScript files against the `gdscript_version_changes.json` log to prevent agents/devs from using deprecated Godot 3.x patterns (e.g., `yield`, `export var`). ALWAYS use this tool if you are unsure of the latest Godot 4.x syntax!
    - `info`: Displays detected Godot executable, engine version, detected game genre, viewport resolutions, and discovered test count.
 
 3. **`tests/test_smoke.gd`** (`extends SceneTree`):
