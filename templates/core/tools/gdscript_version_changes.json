@@ -26,6 +26,10 @@
   ],
   "engine_best_practices": {
     "ui_construction": "ALWAYS build UI in the Godot Editor (.tscn) using nodes (Containers, Buttons, Labels, Panels). NEVER instantiate UI elements via GDScript (e.g., Control.new(), Button.new()) unless it is for pure dynamic visual effects or interactive canvas math rendering. GDScript is for logic and data binding, NOT layout.",
+    "architecture": "Signal UP, Call DOWN. A child node should never directly call methods on its parent. Instead, it should emit a signal that the parent connects to. The parent can call methods on its children.",
+    "composition": "Prefer Node Composition over deep inheritance. Create small, reusable components (like a Health component or Hitbox component) and add them as children to entities.",
+    "node_paths": "Avoid hardcoded node paths (e.g., $Node/Child). Prefer using @export var my_node: Node and assigning it in the inspector, or use Scene Unique Nodes (%NodeName).",
+    "autoloads": "Keep Autoloads (Singletons) to a minimum. Only use them for truly global state (like a GameManager or AudioController), not as a crutch to avoid proper signal architecture.",
     "nodes": "Favor typed node paths (e.g. @onready var label: Label = $Label)",
     "signals": "Use First-Class signals (e.g. button.pressed.connect(_on_pressed)) rather than strings.",
     "typing": "Enforce static typing for all function arguments and return types (e.g. func move(speed: float) -> void:)."
