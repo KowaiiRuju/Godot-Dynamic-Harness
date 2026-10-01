@@ -37,7 +37,7 @@ def get_godot_bin() -> str:
 
     return "godot"
 
-def run_headless_godot(args: list, extra_env: dict = None) -> int:
+def run_headless_godot(args: list, extra_env: dict = None, capture_mode: bool = False) -> int:
     """Runs Godot in headless mode with an isolated APPDATA profile to avoid Editor deadlocks."""
     godot_bin = get_godot_bin()
     env = os.environ.copy()
@@ -51,7 +51,13 @@ def run_headless_godot(args: list, extra_env: dict = None) -> int:
     if extra_env:
         env.update(extra_env)
 
-    cmd = [godot_bin, "--headless"] + args
+    if capture_mode and sys.platform == "win32":
+        # Godot 4.7 on Windows often deadlocks or fails rendering completely in --headless.
+        # Use an isolated window with Dummy audio and GL Compatibility instead.
+        cmd = [godot_bin, "--rendering-method", "gl_compatibility", "--audio-driver", "Dummy"] + args
+    else:
+        cmd = [godot_bin, "--headless"] + args
+        
     print(f"Running: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env)
     return result.returncode
@@ -77,7 +83,7 @@ def cmd_capture(args):
         "GAME_VIEWPORT_HEIGHT": str(args.height),
     }
 
-    code = run_headless_godot(["--script", str(CORE_RUNNER)], extra_env=extra_env)
+    code = run_headless_godot(["--script", str(CORE_RUNNER)], extra_env=extra_env, capture_mode=True)
     sys.exit(code)
 
 def cmd_test(args):

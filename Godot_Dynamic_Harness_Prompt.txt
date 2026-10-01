@@ -77,7 +77,10 @@ Create a production `AGENTS.md` at the project root tailored to this game:
    - Avoid creating classes or components for hypothetical future features.
 4. **Scroll & Input Safety**:
    - Controls inside any `ScrollContainer` (e.g. inventory grids, dialogue logs, quest lists) must set `mouse_filter = 1 (Pass)` or `2 (Ignore)` so dragging is not blocked.
-5. **Heavy Compute Protocol**:
+5. **Graphify Auto-Update Rule**:
+   - Create `.agents/rules/graphify.md` enforcing: "After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)."
+   - Instruct agents to ALWAYS use `graphify query` for codebase navigation before reading raw files.
+6. **Heavy Compute Protocol**:
    - Before executing batch asset processing, dataset simulations, or large multi-file migrations, generate an `implementation_plan.md` artifact with `RequestFeedback: true`.
 
 ---
@@ -97,9 +100,9 @@ Scaffold a general game CLI and runner under `core/tools/`:
 
 2. **`game.py` (Unified CLI Runner at Project Root)**:
    Python CLI tool providing:
-   - `capture --scene <path>`: Renders offscreen screenshots of any `.tscn` scene. Uses an isolated APPDATA profile (`<project>_godot_qa_profile`) so running terminal captures never freezes or conflicts with an open Godot Editor.
-   - `test [--suite <name>|--list]`: Discovers and executes headless test scripts under `tests/test_*.gd`, surfacing assertion failures and catching `SCRIPT ERROR` logs.
-   - `validate`: Static validator that checks `.tscn` file integrity (detects broken `ExtResource` paths) and audits GDScript for forbidden dynamic UI instantiations (`Control.new()`).
+   - `capture --scene <path>`: Renders offscreen screenshots of any `.tscn` scene. Uses an isolated APPDATA profile (`<project>_godot_qa_profile`) so running terminal captures never freezes or conflicts with an open Godot Editor. For Godot 4.7 on Windows, avoid `--headless` for UI captures; use `--rendering-method gl_compatibility --audio-driver Dummy` with an isolated APPDATA to ensure proper rendering without crashing.
+   - `test [--suite <name>|--list]`: Discovers and executes test scripts under `tests/test_*.gd`, surfacing assertion failures and catching `SCRIPT ERROR` logs. Uses `--headless` since rendering is not required.
+   - `validate`: Static validator that checks `.tscn` file integrity (detects broken `ExtResource` paths), audits GDScript for forbidden dynamic UI instantiations (`Control.new()`), and verifies deterministic mechanics (e.g. tracking `randi` vs seeded runs).
    - `info`: Displays detected Godot executable, engine version, detected game genre, viewport resolutions, and discovered test count.
 
 3. **`tests/test_smoke.gd`** (`extends SceneTree`):

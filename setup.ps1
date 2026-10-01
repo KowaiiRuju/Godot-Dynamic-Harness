@@ -19,10 +19,32 @@ if (Get-Command pip -ErrorAction SilentlyContinue) {
     Write-Host "  ⚠ pip not found. Please install Python to use Graphify." -ForegroundColor Red
 }
 
-# 2. Prepare .agents/skills directory
-Write-Host "`n[2/4] Setting up .agents/skills/ directory..." -ForegroundColor Yellow
+# 2. Prepare .agents/skills and .agents/rules directory
+Write-Host "`n[2/4] Setting up .agents/ directories..." -ForegroundColor Yellow
 $SkillsDir = Join-Path (Get-Location) ".agents\skills"
+$RulesDir = Join-Path (Get-Location) ".agents\rules"
 New-Item -ItemType Directory -Force -Path $SkillsDir | Out-Null
+New-Item -ItemType Directory -Force -Path $RulesDir | Out-Null
+
+$GraphifyRulePath = Join-Path $RulesDir "graphify.md"
+@"
+---
+trigger: always_on
+description: Consult the graphify knowledge graph at graphify-out/ for codebase and architecture questions.
+---
+
+## graphify
+
+This project has a graphify knowledge graph at graphify-out/.
+
+Rules:
+- For codebase or architecture questions, when ``graphify-out/graph.json`` exists, first run ``graphify query "<question>"`` (CLI) or ``query_graph`` (MCP). Use ``graphify path "<A>" "<B>"`` / ``shortest_path`` for relationships and ``graphify explain "<concept>"`` / ``get_node`` for focused concepts. These return a scoped subgraph, usually much smaller than ``GRAPH_REPORT.md`` or raw grep output.
+- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context
+- After modifying code files in this session, run ``graphify update .`` to keep the graph current (AST-only, no API cost)
+"@ | Out-File -FilePath $GraphifyRulePath -Encoding utf8 -Force
+Write-Host "  ✓ .agents/rules/graphify.md created." -ForegroundColor Green
+
 
 # 3. Clone Ponytail (Anti-bloat & YAGNI rules)
 Write-Host "`n[3/4] Pulling Ponytail & Prompt Master..." -ForegroundColor Yellow
