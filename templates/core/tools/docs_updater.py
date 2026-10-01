@@ -15,6 +15,9 @@ import re
 import argparse
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 # Paths
 TOOLS_DIR = Path(__file__).resolve().parent
 JSON_LOG = TOOLS_DIR / "gdscript_version_changes.json"
@@ -63,53 +66,98 @@ def cmd_scan(args):
 
     data = load_changes()
     patterns = []
-    
+    seen_old = set()
+
     # Build list of deprecation checks
     for migration in data.get("version_migrations", []):
-        if migration["to_version"].startswith("4"):
-            for change in migration.get("changes", []):
-                old_syn = change["old"]
-                # Create a simple regex for the old syntax
-                # E.g. "export var" -> r"\bexport\s+var\b"
-                if old_syn == "export var":
-                    patterns.append((r"(?<!@)\bexport\s+var\b", change))
-                elif old_syn == "onready var":
-                    patterns.append((r"(?<!@)\bonready\s+var\b", change))
-                elif old_syn == "change_scene":
-                    patterns.append((r"\bchange_scene\(", change))
-                elif old_syn == "rand_range":
-                    patterns.append((r"\brand_range\(", change))
-                elif old_syn == "File.new()":
-                    patterns.append((r"\bFile\.new\(", change))
-                elif old_syn == "Directory.new()":
-                    patterns.append((r"\bDirectory\.new\(", change))
-                elif old_syn == "OS.get_unix_time()":
-                    patterns.append((r"\bOS\.get_unix_time\(", change))
-                elif old_syn == ".instance()":
-                    patterns.append((r"\.instance\(", change))
-                elif "yield(" in old_syn:
-                    patterns.append((r"\byield\(", change))
+        if not migration.get("to_version", "").startswith("4"):
+            continue
+        for change in migration.get("changes", []):
+            old_syn = change.get("old", "")
+            if not old_syn or old_syn in seen_old:
+                continue
+            seen_old.add(old_syn)
+            pat = _compile_pattern(old_syn)
+            if pat:
+                patterns.append((pat, change))
 
-    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    if not patterns:
+        print(f"Note: no mappable deprecation patterns in {JSON_LOG.name}; "
+              f"nothing to check. Use --learn-syntax-old to add one.")
+        return
+
+    try:
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError as exc:
+        print(f"Error: cannot read '{file_path}': {exc}")
+        sys.exit(1)
     lines = content.splitlines()
-    
+
     issues = 0
     for i, line in enumerate(lines, start=1):
-        # Ignore comments
-        clean_line = line.split("#")[0]
-        
+        clean_line = _strip_comment(line)
+        if not clean_line.strip():
+            continue
         for pat, change in patterns:
-            if re.search(pat, clean_line):
+            if pat.search(clean_line):
                 issues += 1
-                print(f"[{file_path.name}:{i}] Warning: Found deprecated syntax '{change['old']}'")
-                print(f"    -> Use: {change['new']}")
-                print(f"    -> Context: {change['context']}\n")
+                print(f"[{file_path.name}:{i}] deprecated '{change['old']}'")
+                print(f"    -> use: {change['new']}")
+                print(f"    -> {change.get('context', '')}\n")
 
     if issues == 0:
-        print(f"✅ {file_path.name} looks clean! No known Godot 3.x syntax found.")
+        print(f"OK {file_path.name}: no known deprecated syntax.")
     else:
-        print(f"❌ Found {issues} outdated syntax issues in {file_path.name}. Please update to Godot 4.x standards.")
+        print(f"{issues} deprecated pattern(s) in {file_path.name}.")
         sys.exit(1)
+
+
+def _strip_comment(line: str) -> str:
+    """Drop # comments and quoted strings so prose in a comment cannot trigger."""
+    out, in_str, quote = [], False, ""
+    for i, ch in enumerate(line):
+        if in_str:
+            if ch == quote and line[i - 1] != "\\":
+                in_str = False
+            continue
+        if ch in "\"'":
+            in_str, quote = True, ch
+            continue
+        if ch == "#":
+            break
+        out.append(ch)
+    return "".join(out)
+
+
+def _compile_pattern(old_syn: str):
+    """Map a known Godot 3.x token to a regex, or None if it cannot be mapped.
+
+    Returning None instead of silently skipping nothing matters: an unmapped
+    entry would otherwise make the scanner report a clean file while checking
+    nothing.
+    """
+    table = {
+        "export var": r"(?<!@)\bexport\s+var\b",
+        "export(int": r"(?<!@)\bexport\s*\(",
+        "onready var": r"(?<!@)\bonready\s+var\b",
+        "change_scene": r"\b(?:change_scene|change_scene_to|change_scene_by_path)\s*\(",
+        "rand_range": r"\brand_range\s*\(",
+        "File.new()": r"\bFile\.new\s*\(",
+        "Directory.new()": r"\bDirectory\.new\s*\(",
+        "OS.get_unix_time()": r"\bOS\.get_unix_time\s*\(",
+        ".instance()": r"\.instance\s*\(",
+        "KinematicBody": r"(?<![\w.])KinematicBody\w*\b",
+        "Spatial": r"(?<![\w.])Spatial\b",
+        "PoolVector": r"(?<![\w.])Pool\w*Array\b",
+        "yield(": r"\byield\s*\(",
+        "instance()": r"(?<![\w.])(?:get_node|load)\s*\([^)]*\)\.instance\s*\(",
+        "connect(self, \"\": r"\bconnect\s*\(\s*self\s*,",
+    }
+    if old_syn in table:
+        return re.compile(table[old_syn])
+    if "yield(" in old_syn:
+        return re.compile(r"\byield\s*\(")
+    return None
 
 def cmd_learn(args):
     """Dynamically append new context, syntax changes, or best practices to the JSON log."""

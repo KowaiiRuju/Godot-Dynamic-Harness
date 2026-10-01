@@ -11,6 +11,16 @@ screenshots/
 qa_capture_results.json
 scene_manifest.json
 
+# Cross-agent handoff state (local only; regenerate with `game.py handoff save`)
+.harness/
+
+# QA scratch that cleanup.py removes; ignore in case it is missed
+_probe.*
+tmp_*
+scratch_*
+*_probe.gd
+*_probe.py
+
 # Python
 __pycache__/
 *.py[cod]

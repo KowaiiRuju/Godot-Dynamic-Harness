@@ -58,25 +58,45 @@ func _run_capture() -> void:
 	else:
 		push_error("Failed to save screenshot: %d" % save_err)
 
-	# Dump node hierarchy rects and font inspection manifest
+	# Dump node hierarchy rects and font inspection manifest.
+	# Emitted as an object (not a bare array) so downstream tools can read the
+	# viewport size and scene identity without guessing.
 	var node_records: Array = []
 	_inspect_nodes(instance, node_records)
-	var manifest_path = global_out_dir.path_join("scene_manifest.json")
+	var manifest_path: String = global_out_dir.path_join("scene_manifest.json")
+	var manifest: Dictionary = {
+		"scene": target_scene,
+		"viewport_size": [req_width, req_height],
+		"frame_settled": 2,
+		"control_count": node_records.size(),
+		"controls": node_records,
+	}
 	var file = FileAccess.open(manifest_path, FileAccess.WRITE)
 	if file:
-		file.store_string(JSON.stringify(node_records, "  "))
+		file.store_string(JSON.stringify(manifest, "  "))
 		file.close()
-		print("Saved manifest: %s" % manifest_path)
+		print("Saved manifest: %s (%d controls)" % [manifest_path, node_records.size()])
+	else:
+		push_error("Failed to write manifest: " + manifest_path)
+
+	# An empty image means rendering produced nothing. Reporting OK here would
+	# let a blank capture pass as a successful one.
+	if img.is_empty():
+		push_error("Captured an empty image; rendering did not produce any pixels.")
+		quit(1)
+		return
 
 	quit(0)
 
 func _inspect_nodes(node: Node, records: Array) -> void:
-	if node is Control and node.is_visible_in_tree():
+	if node is Control:
 		var c := node as Control
 		var entry: Dictionary = {
 			"path": str(node.get_path()),
 			"name": str(node.name),
 			"type": node.get_class(),
+			"visible": c.visible,
+			"is_visible_in_tree": c.is_visible_in_tree(),
 			"rect": [c.global_position.x, c.global_position.y, c.size.x, c.size.y],
 			"mouse_filter": c.mouse_filter
 		}
@@ -88,6 +108,7 @@ func _inspect_nodes(node: Node, records: Array) -> void:
 			entry["text"] = node.get_parsed_text()
 			entry["font_size"] = c.get_theme_font_size("normal_font_size")
 			entry["content_height"] = node.get_content_height()
+			entry["bbcode_enabled"] = node.bbcode_enabled
 		elif node is Button:
 			entry["text"] = node.text
 			entry["disabled"] = node.disabled
