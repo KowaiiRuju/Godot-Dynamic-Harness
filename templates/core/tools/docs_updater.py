@@ -15,6 +15,12 @@ import re
 import argparse
 from pathlib import Path
 
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Paths
 TOOLS_DIR = Path(__file__).resolve().parent
 JSON_LOG = TOOLS_DIR / "gdscript_version_changes.json"

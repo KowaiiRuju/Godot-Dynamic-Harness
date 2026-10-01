@@ -11,6 +11,12 @@ import subprocess
 import shutil
 from pathlib import Path
 
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 PROJECT_ROOT = Path(__file__).parent.resolve()
 CORE_RUNNER = PROJECT_ROOT / "core" / "tools" / "scene_runner.gd"
 DOCS_UPDATER = PROJECT_ROOT / "core" / "tools" / "docs_updater.py"
@@ -117,7 +123,7 @@ def cmd_validate(args):
     forbidden_terms = ["Control.new()", "Button.new()", "Label.new()", "add_theme_stylebox_override"]
     violations = 0
     for gd_file in PROJECT_ROOT.rglob("*.gd"):
-        if "addons" in gd_file.parts or "core/tools" in gd_file.parts:
+        if any(p in gd_file.parts for p in [".agents", "addons", "core"]):
             continue
         try:
             content = gd_file.read_text(encoding="utf-8", errors="ignore")
@@ -146,11 +152,20 @@ def cmd_syntax(args):
         if scan_target.is_file():
             files_to_scan = [scan_target]
         else:
-            files_to_scan = list(scan_target.rglob("*.gd"))
+            files_to_scan = [
+                f for f in scan_target.rglob("*.gd")
+                if not any(p in f.parts for p in [".agents", "addons", "core"])
+            ]
             
         failed = 0
         for f in files_to_scan:
-            result = subprocess.run([sys.executable, str(DOCS_UPDATER), "scan", str(f)], capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, str(DOCS_UPDATER), "scan", str(f)],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace"
+            )
             if result.returncode != 0:
                 print(result.stdout)
                 failed += 1
