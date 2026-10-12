@@ -13,9 +13,13 @@ func _initialize() -> void:
 	if output_dir.is_empty():
 		output_dir = "res://screenshots/debug"
 	if req_width <= 0:
-		req_width = ProjectSettings.get_setting("display/window/size/viewport_width", 1280)
+		req_width = int(ProjectSettings.get_setting_with_override("display/window/size/viewport_width"))
 	if req_height <= 0:
-		req_height = ProjectSettings.get_setting("display/window/size/viewport_height", 720)
+		req_height = int(ProjectSettings.get_setting_with_override("display/window/size/viewport_height"))
+	if req_width <= 0:
+		req_width = 1280
+	if req_height <= 0:
+		req_height = 720
 	call_deferred("_run_capture")
 
 func _run_capture() -> void:
@@ -41,15 +45,20 @@ func _run_capture() -> void:
 	await RenderingServer.frame_post_draw
 
 	# Ensure target directory exists
-	var dir_access = DirAccess.open("res://")
 	var global_out_dir = ProjectSettings.globalize_path(output_dir)
 	if not DirAccess.dir_exists_absolute(global_out_dir):
-		DirAccess.make_dir_recursive_absolute(global_out_dir)
+		if DirAccess.make_dir_recursive_absolute(global_out_dir) != OK:
+			push_error("Cannot create capture output directory")
+			quit(1)
+			return
 
 	# Capture offscreen viewport image
 	var img: Image = root.get_texture().get_image()
-	var base_name: String = target_scene.get_file().get_basename()
-	var file_path: String = output_dir.path_join("%s_%dx%d.png" % [base_name, req_width, req_height])
+	if img == null or img.is_empty():
+		push_error("Renderer returned no image")
+		quit(1)
+		return
+	var file_path: String = output_dir.path_join("capture.png")
 	var global_path: String = ProjectSettings.globalize_path(file_path)
 	var save_err = img.save_png(global_path)
 
@@ -57,6 +66,8 @@ func _run_capture() -> void:
 		print("Saved screenshot: %s" % global_path)
 	else:
 		push_error("Failed to save screenshot: %d" % save_err)
+		quit(1)
+		return
 
 	# Dump node hierarchy rects and font inspection manifest
 	var node_records: Array = []
@@ -64,9 +75,25 @@ func _run_capture() -> void:
 	var manifest_path = global_out_dir.path_join("scene_manifest.json")
 	var file = FileAccess.open(manifest_path, FileAccess.WRITE)
 	if file:
-		file.store_string(JSON.stringify(node_records, "  "))
+		file.store_string(JSON.stringify({
+			"capture_id": OS.get_environment("GAME_CAPTURE_ID"),
+			"scene": target_scene, "viewport": [img.get_width(), img.get_height()],
+			"requested_viewport": [req_width, req_height],
+			"renderer": RenderingServer.get_current_rendering_method(),
+			"user_data_dir": OS.get_user_data_dir(), "nodes": node_records
+		}, "  "))
+		file.flush()
+		if file.get_error() != OK:
+			push_error("Cannot write capture manifest")
+			file.close()
+			quit(1)
+			return
 		file.close()
 		print("Saved manifest: %s" % manifest_path)
+	else:
+		push_error("Cannot open capture manifest for writing")
+		quit(1)
+		return
 
 	quit(0)
 

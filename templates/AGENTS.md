@@ -1,27 +1,19 @@
-# Project Guidelines & Agent Instructions
+# Godot development workflow
 
-## 1. Scene-First / Editor-First UI Construction
-- **MANDATORY: READ `.tscn` FIRST**: Always read and inspect the `.tscn` scene file FIRST before writing or modifying any GDScript. The `.tscn` file is the ground truth.
-- **NEVER BUILD UI IN GDSCRIPT CODE**: Do NOT instantiate UI elements dynamically in GDScript using `Control.new()`, `Button.new()`, `PanelContainer.new()`, `Label.new()`, `TextureRect.new()`, `HBoxContainer.new()`, or `VBoxContainer.new()`.
-- **NEVER CREATE OR OVERRIDE STYLES IN CODE**: Do NOT create `StyleBoxFlat.new()` or call `add_theme_stylebox_override()`, `add_theme_font_size_override()`, `add_theme_color_override()`, etc. in GDScript.
-- **ALL UI MUST BE VISUALLY EDITABLE IN GODOT EDITOR**:
-  - Every screen, HUD, modal, card, inventory slot, grid item, list row, and button MUST be constructed directly in `.tscn` scene files with all containers, labels, styles, margins, anchors, and fonts pre-baked.
-  - If a list or grid repeats items (e.g. inventory slots, dialogue choices, spell icons), create a dedicated `.tscn` component scene or pre-place the nodes in the parent scene so the developer can visually select and tweak every element in the Godot 2D/3D Canvas.
-- **GDSCRIPT'S ONLY ROLE IN UI**: GDScript should ONLY assign runtime data (e.g. `label.text = player_name`, `texture_rect.texture = icon_tex`, `button.disabled = is_locked`), connect signals, and handle state/animation logic.
+- Inspect before setup. Present a tailored plan with exact file/dependency actions; wait for explicit user review/approval before applying it. Preserve existing rules, skills, settings and helpers.
+- Start fresh sessions with docs/harness/PROJECT.md, TOOLS.md and CHECKPOINT.md, then run python game.py info --json. Refresh stale context using python game.py context --refresh --json.
+- Before each codebase investigation, check python game.py graph --json, refresh missing/stale/untracked graphs with graph --refresh --timeout 120 --json, then graph --query "the investigation question" --json. Prefer scoped queries to loading the full graph/report. Verify graph findings against source. If Graphify fails, report why; a user-approved direct-source fallback must be recorded.
+- After code/config changes, refresh graph and context. Tool outcomes update the checkpoint; add concise decisions, next steps and unverified assumptions outside its managed block. Never store secrets in guidance/checkpoints.
+- Read relevant .tscn before changing attached GDScript. Author UI layout, themes and reusable components in editable scenes; bind data and signals in scripts. Instantiating a reusable PackedScene is valid. Pure engine/tool infrastructure has no UI scene requirement.
+- Use the selected engine version and matching official documentation. Migration scans, engine parse/load checks, rendered captures, gameplay and device acceptance are separate evidence.
+- Prefer typed GDScript, composition, child signals to parents and explicit dependencies. Adapt to existing architecture rather than imposing a new framework.
+- Preserve clickable controls in scroll views; verify input propagation before changing mouse_filter. Do not apply a blanket filter rule.
+- Discover arguments from info --json. Check status/findings/artifacts; skipped means no work ran. Engine checks/tests execute project code; isolated save data is not a sandbox.
+- Propose game-specific helpers/smoke tests only for an observed need. Reuse the toolkit and standard library first; do not bulk-install or delete skill libraries.
+- Follow tiered testing strategies (see docs/TESTING_GUIDE.md):
+  * Smoke Testing: After setup or engine updates, run python game.py test --suite tests/test_harness_smoke.gd --json or capture --json. If startup crashes or autoloads fail, stop immediately and fix the break before continuing.
+  * Sanity Testing: After modifying a specific scene or script, run targeted sanity checks: python game.py test --suite <path> --json, capture --scene <path> --json, and validate --engine --json.
+  * Regression Testing: Before marking tasks complete, committing code, or exporting builds, run full regression verification: python game.py test --json, capture --all-scenes --json, validate --engine --json, and syntax --scan . --json.
+- Manage capture artifacts responsibly: Default captures in screenshots/debug/ automatically retain only the 5 most recent runs. Purge ephemeral debug captures and review galleries using python game.py clean --captures --json (or clean --all --json) before milestone handoffs or git commits.
 
-## 2. Godot Architecture: The Layer Cake
-Organize game systems into four distinct layers:
-1. **Presentation** (UI / HUD / VFX / Audio): Listens to signals, displays state. Never owns data or alters game state directly.
-2. **Logic** (State Machines / Components / Systems): Queries data, manages state transitions and mechanics.
-3. **Data** (`Resource` / `.tres`): Single serializable source of truth for stats, inventory items, quests, dialogue trees.
-4. **Infrastructure** (Autoload singletons): Global managers (SaveManager, AudioBus, SignalBus). Communicates via "Signal Up, Call Down".
 
-## 3. Ponytail YAGNI & Anti-Bloat Mandate
-- Rely on Godot's built-in nodes (`Timer`, `PathFollow`, `VisibleOnScreenNotifier`, `NavigationAgent`) and typed GDScript functions before engineering custom framework layers.
-- Do not build speculative abstractions or systems for features not yet requested.
-
-## 4. ScrollContainer Mouse Filtering
-- **Mouse Filter Pass in Scroll Views**: Always set `mouse_filter = 1` (Pass) or `mouse_filter = 2` (Ignore) for all Control nodes inside a `ScrollContainer`. This ensures that drag/scroll events are not consumed by child panels, buttons, or labels.
-
-## 5. Heavy Compute & Planning Protocol
-- **Implementation Plan Mandatory**: Before executing any multi-file refactoring, batch simulation, dataset generation, or heavy compute task, ALWAYS generate `implementation_plan.md` with `RequestFeedback: true` for user approval first.

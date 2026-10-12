@@ -1,123 +1,44 @@
-================================================================================
-GODOT DYNAMIC HARNESS: UNIVERSAL WORKSPACE BOOTSTRAP PROMPT
-================================================================================
-Target Engines: Godot 4.7+ / 4.x
-Target Agents: Google Antigravity (IDE & CLI), Claude Code, Cursor, Codex
-Repository: https://github.com/KowaiiRuju/Godot-Dynamic-Harness
-================================================================================
+GODOT DYNAMIC HARNESS: REVIEW-FIRST PROJECT SETUP
 
-COPY EVERYTHING BELOW THIS LINE AND PASTE INTO YOUR AGENT CHAT:
---------------------------------------------------------------------------------
+Use this harness to equip my Godot project and IDE agent with the right tools and persistent context. Target Antigravity first; VS Code second.
 
-You are a Lead Godot 4.7+ Game Systems Architect and AI Environment Engineer.
+1. Inspect existing project settings, instructions, tools and test inventory. Preserve current architecture and user customizations. Use existing Graphify queries before codebase investigations when a graph exists; verify relevant findings against source. Never claim an unsupported/missing graph ran.
 
-Your objective is to bootstrap this repository into an optimized, agentic game development workspace. You will analyze this project, install the 44 Godot domain skills alongside Graphify, Ponytail, and Prompt Master, intelligently curate the skills to match this game's genre, establish Scene-First UI rules, and build a general-purpose headless scene capture and test harness.
+2. Run the harness checkout's planning command:
+   python bootstrap.py plan --project "<game root>" --ide antigravity
+   Choose vscode/both if requested. Select the actual --godot executable when discovery is ambiguous.
+   If Graphify is missing, propose --graphify install; do not install it yet.
+   Propose --smoke only when a generic main-scene test fits the observed startup flow.
+   Propose --png-grid for PNG comparison sheets if Pillow is missing; HTML galleries need no extra package. Dependency installation belongs in the reviewed plan.
+   Game-specific helpers/tests require an observed need and a reviewed proposal.
 
-Follow these phases sequentially:
+3. Present the generated Markdown plan to the user. Explain project findings, exact file/dependency actions, preserved files, conflicts, optional tests and verification limits. Ask what to adjust. DO NOT invoke apply or install tools until the user explicitly approves the exact plan. Regenerate after changing options or resolving conflicts.
 
----
+4. After approval, run the exact apply command/digest printed in that plan. Inspect returned status, findings and post-apply checks. A digest identifies the plan; it cannot prove user approval. Record failures and incomplete checks rather than declaring the workspace ready.
 
-### Phase 1: Deep Project Reconnaissance (Gather Context Slowly)
-Do NOT rush into scaffolding. First, inspect the repository to understand what game is being built:
-1. **Engine & Window Config**: Read `project.godot`:
-   - Identify engine version, main scene (`application/run/main_scene`), and renderer (Forward+, Mobile, or Compatibility).
-   - Check viewport resolution (`viewport_width`, `viewport_height`), stretch mode, and orientation.
-   - List registered Autoloads / singletons.
-2. **Dimension & Node Inspection**:
-   - Check whether the game is **2D** (uses `Node2D`, `CharacterBody2D`, `TileMapLayer`, `CanvasItem`) or **3D** (`Node3D`, `CharacterBody3D`, `GridMap`, meshes).
-3. **Genre & Core Mechanics Detection**:
-   - Scan directory names, scripts, and scene hierarchies.
-   - Look for systems: RPG elements (inventory, stats, dialogue, quests, equipment), Combat (hitboxes, health, state machines), Navigation (AStar, NavigationAgent), Multiplayer (ENet, RPCs), or Mobile features (touch, virtual joysticks).
-4. **Summary**: Output a concise 4-bullet assessment of the game's genre, dimension, target platforms, and existing core architecture before continuing.
+5. Keep concise persistent files in the project:
+   AGENTS.md and selected IDE instructions
+   docs/harness/PROJECT.md, TOOLS.md, CHECKPOINT.md
+   graphify-out/graph.json and .harness freshness/setup state
+   Preserve user text outside managed blocks. Do not store secrets or copy entire chat logs.
 
----
+6. In each fresh session, read the concise project/tool/checkpoint documents and run:
+   python game.py info --json
 
-### Phase 2: External Skills Installation & Intelligent Curation
-1. **Install Global Context & Meta Tools**:
-   - Check / install Graphify: run `pip install graphifyy` and `graphify install` (for AST knowledge graph queries).
-   - Ensure the `.agents/skills/` directory exists.
-   - Clone **Ponytail** (anti-bloat & YAGNI rule engine):
-     `git clone https://github.com/DietrichGebert/ponytail.git .agents/skills/ponytail`
-   - Clone **Prompt Master** (meta-prompt optimization):
-     `git clone https://github.com/nidhinjs/prompt-master.git .agents/skills/prompt-master`
+7. Before each codebase investigation:
+   python game.py graph --json
+   python game.py graph --refresh --timeout 120 --json    (if missing/stale/untracked)
+   python game.py graph --query "<specific file/symbol/question>" --json
+   Narrow queries instead of dumping full reports. If Graphify fails, report the reason and obtain/record approval for a source-only fallback. Graph results are navigation hints; source and engine behavior are the evidence.
 
-2. **Clone the 44 Godot Domain Skills**:
-   - Clone the complete 44-skill library:
-     `git clone https://github.com/thedivergentai/GD-Agentic-Skills.git .agents/skills/gd-agentic-skills`
+8. For development, inspect relevant .tscn before attached GDScript. Keep layout/themes/reusable UI components editable in scenes; scripts bind data, connect signals and implement behavior. Prefer typed GDScript, composition and the existing game's patterns. Do not impose a generic architecture or blanket ScrollContainer mouse-filter rule.
 
-3. **Intelligent Skill Selection & Pruning (Context-Aware)**:
-   Do NOT leave irrelevant skills polluting the agent context budget. Move only relevant skills directly into `.agents/skills/` and prune the rest:
-   - **Always Retain (Core)**:
-     `godot-master`, `godot-gdscript-mastery`, `godot-project-foundations`, `godot-signal-architecture`, `godot-autoload-architecture`, `godot-scene-management`, `godot-resource-data-patterns`, `godot-ui-containers`, `godot-ui-theming`, `godot-testing-patterns`.
-   - **Retain Conditionally (Based on Phase 1)**:
-     - *If RPG / Adventure*: Retain `godot-inventory-system`, `godot-dialogue-system`, `godot-quest-system`, `godot-economy-system`, `godot-save-load-systems`.
-     - *If 2D*: Retain `godot-characterbody-2d`, `godot-2d-physics`, `godot-2d-animation`. (Prune 3D skills).
-     - *If 3D*: Retain 3D physics, camera, and lighting skills. (Prune 2D-only skills).
-     - *If Action / Platformer*: Retain `godot-animation-tree-mastery`, `godot-camera-systems`, `godot-input-handling`, `godot-tweening`.
-     - *If Multiplayer*: Retain `godot-multiplayer-networking` and `godot-server-architecture`. If purely single-player, REMOVE them.
-     - *If Mobile*: Retain `godot-platform-mobile` and `godot-adapt-desktop-to-mobile`. If desktop-only, REMOVE them.
-   - Clean up the temporary clone directory so only the curated skills remain active in `.agents/skills/`.
+9. Use info's real command/argument inventory and follow tiered testing strategies (see docs/TESTING_GUIDE.md):
+   - Smoke Testing: Run python game.py test --suite tests/test_harness_smoke.gd --json (or capture --json) after setup or engine switches to ensure the engine boots and autoloads run. Stop if it fails.
+   - Sanity Testing: Run focused suite/scene tests (python game.py test --suite <path> --json or capture --scene <path> --json) immediately after surgical edits to verify targeted behavior.
+   - Regression Testing: Run full test sweeps (python game.py test --json), batch captures (capture --all-scenes --json), engine checks (validate --engine --json), and syntax scans (syntax --scan . --json) before finishing tasks or committing. Review labeled gallery/contact sheets and manifests; batch failures stay visible.
+   Capture preserves the project renderer by default and requires graphics; engine execution is not sandboxed by save-profile isolation. Ephemeral debug captures automatically retain the 5 most recent runs; use python game.py clean --captures --json (or clean --all --json) to purge captures and QA review galleries before committing.
 
----
+10. After source/config changes, refresh graph and project context. Keep concise decisions, next steps and unverified assumptions outside the checkpoint's managed block. Static scans, engine parsing/loading, screenshots, gameplay and device/release acceptance are separate gates.
 
-### Phase 3: Project Rules (`AGENTS.md`)
-Create a production `AGENTS.md` at the project root tailored to this game:
-1. **Scene-First / Editor-First UI Construction**:
-   - The `.tscn` file is the ground truth. Always read `.tscn` before editing `.gd`.
-   - NEVER construct UI in code with `Control.new()`, `Button.new()`, `Label.new()`, etc.
-   - NEVER add or override styles in GDScript via `add_theme_*_override()`.
-   - All HUD elements, dialogue boxes, menus, cards, and windows must be visually assembled in the Godot Editor. GDScript's only role in UI is binding data and reacting to signals.
-2. **The Godot Layer Cake & Signal Architecture**:
-   - **Presentation** (HUD/UI/VFX) listens to signals; never mutates game state directly.
-   - **Logic** (State machines, Controllers, Systems) orchestrates mechanics.
-   - **Data** (`Resource` / `.tres`) is the single serializable source of truth (items, stats, quests).
-   - **Infrastructure** (Autoload singletons) coordinates via "Signal Up, Call Down".
-3. **Ponytail YAGNI & Anti-Bloat Mandate**:
-   - Favor built-in engine nodes and typed GDScript standard functions over custom framework abstractions.
-   - Avoid creating classes or components for hypothetical future features.
-4. **Scroll & Input Safety**:
-   - Controls inside any `ScrollContainer` (e.g. inventory grids, dialogue logs, quest lists) must set `mouse_filter = 1 (Pass)` or `2 (Ignore)` so dragging is not blocked.
-5. **Graphify Auto-Update Rule**:
-   - Create `.agents/rules/graphify.md` enforcing: "After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)."
-   - Instruct agents to ALWAYS use `graphify query` for codebase navigation before reading raw files.
-6. **Heavy Compute Protocol**:
-   - Before executing batch asset processing, dataset simulations, or large multi-file migrations, generate an `implementation_plan.md` artifact with `RequestFeedback: true`.
-
----
-
-### Phase 4: General Game Headless Verification Harness
-
-Scaffold a general game CLI and runner under `core/tools/`:
-
-1. **`core/tools/scene_runner.gd`** (`extends SceneTree`):
-   - General-purpose offscreen renderer for ANY game scene (main menu, gameplay level, inventory screen, battle arena, character viewer, or dialogue modal).
-   - Reads environment variables: `GAME_TARGET_SCENE`, `GAME_OUTPUT_DIR`, `GAME_VIEWPORT_WIDTH`, `GAME_VIEWPORT_HEIGHT`.
-   - Instantiates the scene offscreen using `--headless`.
-   - Awaits `process_frame` and `RenderingServer.frame_post_draw`.
-   - Captures the offscreen buffer using `root.get_texture().get_image()` and writes a clean PNG to `screenshots/debug/`.
-   - Dumps `scene_manifest.json` recording all active `Control` and `Node` rects, visibility, and font sizes to catch clipping or offscreen elements automatically.
-   - Calls `quit(0)` on success or `quit(1)` on error.
-
-2. **`game.py` (Unified CLI Runner at Project Root)**:
-   Python CLI tool providing:
-   - `capture --scene <path>`: Renders offscreen screenshots of any `.tscn` scene. Uses an isolated APPDATA profile (`<project>_godot_qa_profile`) so running terminal captures never freezes or conflicts with an open Godot Editor. For Godot 4.7 on Windows, avoid `--headless` for UI captures; use `--rendering-method gl_compatibility --audio-driver Dummy` with an isolated APPDATA to ensure proper rendering without crashing.
-   - `test [--suite <name>|--list]`: Discovers and executes test scripts under `tests/test_*.gd`, surfacing assertion failures and catching `SCRIPT ERROR` logs. Uses `--headless` since rendering is not required.
-   - `validate`: Static validator that checks `.tscn` file integrity (detects broken `ExtResource` paths), audits GDScript for forbidden dynamic UI instantiations (`Control.new()`), and verifies deterministic mechanics (e.g. tracking `randi` vs seeded runs).
-   - `syntax [--scan <dir>|--query <kw>]`: Validates GDScript files against the `gdscript_version_changes.json` log to prevent agents/devs from using deprecated Godot 3.x patterns (e.g., `yield`, `export var`). ALWAYS use this tool if you are unsure of the latest Godot 4.x syntax!
-   - `syntax [--learn-practice-key <key> --learn-practice-desc <desc>]`: AI Agents should use this to append dynamically learned best practices specific to the project or Godot version back into the JSON memory log.
-   - `syntax [--learn-syntax-old <old> --learn-syntax-new <new>]`: AI Agents should use this to append newly discovered syntax deprecations into the JSON memory log so future agents don't hallucinate it again.
-   - `info`: Displays detected Godot executable, engine version, detected game genre, viewport resolutions, and discovered test count.
-
-3. **`tests/test_smoke.gd`** (`extends SceneTree`):
-   - Simple smoke test script that verifies the main scene and key game screens can load into memory and advance 2 frames without crashing or throwing script errors.
-
----
-
-### Phase 5: Verification & Hand-off
-1. Run `python game.py info` to confirm Godot discovery and environment profile isolation.
-2. Run `python game.py capture --scene <main_scene_path>` to capture a baseline offscreen screenshot.
-3. Run `python game.py test` to confirm the smoke test passes.
-4. Output a summary showing:
-   - The detected game genre and dimension.
-   - The list of curated Godot skills kept in `.agents/skills/`.
-   - The generated commands and paths to test the game headless.
+Do not bulk-install or delete skill libraries, automatically upgrade Godot, generate comprehensive gameplay suites, or add MCP/live-editor infrastructure without a separately reviewed need. Never claim agent compliance or token savings based only on generated Markdown files.
