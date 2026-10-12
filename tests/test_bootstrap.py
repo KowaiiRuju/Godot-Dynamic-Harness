@@ -5,8 +5,13 @@ import json
 import subprocess
 import tempfile
 import unittest
+import sys
 from pathlib import Path
 from unittest.mock import patch
+
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from test_game_cli import ROOT
 
 spec = importlib.util.spec_from_file_location("bootstrap", ROOT / "bootstrap.py")
@@ -131,6 +136,38 @@ class Bootstrap(unittest.TestCase):
         for entry in data["changes"]:
             self.assertFalse((self.root / entry["path"]).is_file())
 
+    def test_skills_planning_and_application(self):
+        # 1. Verify skills="none" plans no skills dependency
+        none_plan = bootstrap.make_plan(self.root, graphify="skip", skills="none")
+        self.assertFalse(any(d.get("action") == "install_skills" for d in none_plan["dependencies"]))
+
+        # 2. Verify skills="curated" plans core skills + graphify
+        data = bootstrap.make_plan(self.root, graphify="skip", skills="curated")
+        skills_dep = next((d for d in data["dependencies"] if d.get("action") == "install_skills"), None)
+        self.assertIsNotNone(skills_dep)
+        names = [s["name"] for s in skills_dep["skills"]]
+        self.assertIn("graphify", names)
+        self.assertIn("ponytail", names)
+        self.assertIn("prompt-master", names)
+        self.assertIn("godot-master", names)
+
+        # 3. Verify write_plan formats proposed skills in markdown
+        response = bootstrap.write_plan(data)
+        review_md = Path(response["artifacts"][0]).read_text(encoding="utf-8")
+        self.assertIn("Proposed skills (.agents/skills/):", review_md)
+        self.assertIn("godot-master", review_md)
+        self.assertIn("graphify", review_md)
+
+        # 4. Verify apply_plan deploys skills to .agents/skills/
+        out = self.apply(data, Path(response["artifacts"][1]))
+        self.assertEqual(out["status"], "success")
+        graphify_skill = self.root / ".agents/skills/graphify/SKILL.md"
+        self.assertTrue(graphify_skill.is_file())
+        self.assertIn("name: graphify", graphify_skill.read_text(encoding="utf-8"))
+        master_skill = self.root / ".agents/skills/godot-master/SKILL.md"
+        self.assertTrue(master_skill.is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
+

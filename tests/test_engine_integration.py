@@ -7,6 +7,10 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from test_game_cli import call, game
 from test_bootstrap import bootstrap
 

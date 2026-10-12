@@ -26,6 +26,7 @@ The result points to a Markdown plan containing exact file diffs, dependency act
 - --graphify skip is an explicit opt-out; it does not satisfy the normal graph-navigation workflow.
 - --smoke proposes a reusable main-scene smoke test and its execution after approval. Omit it when your game's initialization needs a tailored test.
 - --png-grid proposes Pillow for PNG comparison sheets when it is unavailable. Installation uses only the project's .harness/venv; the wrapper option is -PNGGrid. HTML galleries work without Pillow.
+- --skills curated, core, all, or none curates and deploys agent skills to .agents/skills/ (Graphify, Ponytail, Prompt-Master, and Godot domain skills) tailored to project dimension and mechanics. The CLI default is curated.
 - --timeout sets the subprocess deadline.
 
 After the user has explicitly approved that exact plan, run the apply command printed at its end:
@@ -53,6 +54,7 @@ The approved setup installs selected files, refreshes project context, builds th
 | graphify-out/graph.json | Persistent local source graph |
 | .harness/ | Plan approvals, freshness state, optional dependency environment and setup/check outcomes |
 | tests/test_harness_smoke.gd | Optional main-scene smoke test |
+| .agents/skills/ | Curated workspace agent skills with valid SKILL.md definitions |
 
 Setup adds local graph/profile/venv/capture exclusions to .gitignore. Project guidance can be committed; generated graph/state stays local and survives IDE restarts.
 

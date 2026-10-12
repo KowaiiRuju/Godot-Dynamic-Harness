@@ -1,8 +1,13 @@
 import importlib.util
 import tempfile
 import unittest
+import sys
 from pathlib import Path
 from unittest.mock import patch
+
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from test_game_cli import game
 
 sheet = game.load_tool("contact_sheet")

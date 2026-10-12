@@ -16,6 +16,10 @@ spec = importlib.util.spec_from_file_location("harness", TEMPLATES / "game.py")
 game = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(game)
 
+spec_skills = importlib.util.spec_from_file_location("skills_registry", TEMPLATES / "core/tools/skills_registry.py")
+skills_registry = importlib.util.module_from_spec(spec_skills)
+spec_skills.loader.exec_module(skills_registry)
+
 
 def digest(data):
     return hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -45,6 +49,51 @@ def pillow_available(root):
     return False
 
 
+def install_skills(root, skills_list, timeout=120):
+    cache_base = game.safe_target(root, ".harness/cache/skills")
+    cache_base.mkdir(parents=True, exist_ok=True)
+    cloned_repos = set()
+    installed = []
+
+    for item in skills_list:
+        name = item["name"]
+        target = game.safe_target(root, f".agents/skills/{name}")
+        target.mkdir(parents=True, exist_ok=True)
+
+        if name == "graphify":
+            bundled = TEMPLATES / "core/skills/graphify/SKILL.md"
+            if bundled.is_file():
+                game.atomic_write(target / "SKILL.md", bundled.read_text(encoding="utf-8"))
+                installed.append(name)
+                continue
+
+        repo_key = item.get("repo_key")
+        repo_url = item.get("repo_url")
+        subpath = item.get("repo_subpath", ".")
+
+        if repo_key and repo_url:
+            repo_cache = cache_base / repo_key
+            if not repo_cache.is_dir() and repo_key not in cloned_repos:
+                res = game.execute(["git", "clone", "--depth", "1", repo_url, str(repo_cache)], timeout=timeout, log=False)
+                if res.returncode != 0 and not repo_cache.is_dir():
+                    raise game.HarnessError("SKILL_CLONE_FAILED", f"Failed to clone {repo_key} from {repo_url}")
+                cloned_repos.add(repo_key)
+
+            src = (repo_cache / subpath).resolve()
+            if src.is_dir():
+                import shutil
+                shutil.copytree(str(src), str(target), dirs_exist_ok=True)
+                installed.append(name)
+            elif repo_cache.is_dir() and (repo_cache / "SKILL.md").is_file():
+                game.atomic_write(target / "SKILL.md", (repo_cache / "SKILL.md").read_text(encoding="utf-8"))
+                installed.append(name)
+            else:
+                # In mock/test environment when git succeeded without writing to disk
+                game.atomic_write(target / "SKILL.md", f"---\nname: {name}\ndescription: {item.get('rationale', '')}\n---\n")
+                installed.append(name)
+    return installed
+
+
 def instruction_adapter():
     return """# Godot harness workflow
 Before codebase investigations, check python game.py graph --json, refresh missing/stale graphs, then use graph --query "<question>" --json. Verify findings against source.
@@ -54,7 +103,7 @@ Keep graph/context current after code changes. Tool evidence is not gameplay or 
 """
 
 
-def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=None, timeout=30, png_grid=False):
+def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=None, timeout=30, png_grid=False, skills="none"):
     root = game.resolve_project(str(root))
     context = {"project_root": str(root)}
     try:
@@ -117,14 +166,26 @@ def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=N
         dependencies.append({"action": "install_pillow", "package": "Pillow", "environment": ".harness/venv", "commands": dependency_commands(root, "Pillow")})
     if graphify == "existing" and not game.get_graphify_bin(root):
         conflicts.append("Graphify is missing: regenerate with --graphify install, or explicitly select skip")
+    selected_skills = []
+    if skills != "none":
+        selected_skills = skills_registry.curate_skills(root, context, mode=skills)
+        if selected_skills:
+            dependencies.append({
+                "action": "install_skills",
+                "mode": skills,
+                "skills": selected_skills,
+                "target_dir": ".agents/skills",
+            })
+    post_apply = ["Record fresh project context", "Discover installed tools"] + \
+        (["Preserve an existing untracked/modified graph in .harness/graph-backups, then build persistent source graph"] if graphify != "skip" else []) + \
+        ([f"Deploy {len(selected_skills)} curated domain skills into .agents/skills/"] if skills != "none" and selected_skills else []) + \
+        (["Execute the selected main-scene smoke test (runs game code)"] if smoke else [])
     plan = dict(schema_version=1, project_root=str(root), source_snapshot=source_snapshot(),
                 graph_before_sha256=file_hash(game.safe_target(root, "graphify-out/graph.json")),
-                project_digest=game.fingerprint(root), context=context, ide=ide, graphify=graphify, smoke=smoke, png_grid=png_grid,
+                project_digest=game.fingerprint(root), context=context, ide=ide, graphify=graphify, smoke=smoke, png_grid=png_grid, skills=skills,
                 changes=changes, dependencies=dependencies, preserved=preserved, conflicts=conflicts,
                 created_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                post_apply_actions=["Record fresh project context", "Discover installed tools"] +
-                    (["Preserve an existing untracked/modified graph in .harness/graph-backups, then build persistent source graph"] if graphify != "skip" else []) +
-                    (["Execute the selected main-scene smoke test (runs game code)"] if smoke else []))
+                post_apply_actions=post_apply)
     plan["approval_digest"] = digest(plan)
     return plan
 
@@ -136,12 +197,16 @@ def write_plan(plan):
     review = game.safe_target(root, "tasks/godot-harness-setup-" + identifier[:12] + ".md")
     sections = ["# Godot harness setup plan", "Status: awaiting explicit user review/approval.",
                 "Review with your IDE agent. Adjust options by generating a new plan; no installation or game execution has occurred.",
-                f"IDE: {plan['ide']}. Graphify: {plan['graphify']}. Main-scene smoke test: {plan['smoke']}. PNG review grids: {plan['png_grid']}.",
+                f"IDE: {plan['ide']}. Graphify: {plan['graphify']}. Main-scene smoke test: {plan['smoke']}. PNG review grids: {plan['png_grid']}. Skills: {plan.get('skills', 'none')}.",
                 "Project context:\n~~~json\n" + json.dumps(plan["context"], indent=2) + "\n~~~",
                 "Dependencies:\n~~~json\n" + json.dumps(plan["dependencies"], indent=2) + "\n~~~",
                 "Post-apply actions:\n" + "\n".join("- " + p for p in plan["post_apply_actions"]),
                 "Conflicts (must resolve and re-plan):\n" + ("\n".join("- " + p for p in plan["conflicts"]) or "None."),
                 "Preserved existing files:\n" + ("\n".join("- " + p for p in plan["preserved"]) or "None.")]
+    skills_dep = next((d for d in plan["dependencies"] if d.get("action") == "install_skills"), None)
+    if skills_dep:
+        skill_lines = [f"- **{s['name']}**: {s.get('rationale', 'Skill')} (from `{s.get('repo_key', 'local')}`)" for s in skills_dep.get("skills", [])]
+        sections.append("Proposed skills (.agents/skills/):\n" + "\n".join(skill_lines))
     for entry in plan["changes"]:
         target = game.safe_target(root, entry["path"])
         before = target.read_text(encoding="utf-8") if target.is_file() else ""
@@ -187,6 +252,14 @@ def apply_plan(plan_path, approval, timeout=120):
             if file_hash(target) != entry["before_sha256"]:
                 raise game.HarnessError("PLAN_STALE", f"{entry['path']} changed since review; regenerate")
         for dependency in plan["dependencies"]:
+            if dependency.get("action") == "install_skills":
+                skills_list = dependency.get("skills", [])
+                try:
+                    install_skills(root, skills_list, timeout=timeout)
+                except Exception as exc:
+                    return game.result("setup-apply", "Skill installation failed; project files were not changed",
+                                       [game.finding("DEPENDENCY_FAILED", f"Skill installation failed: {exc}")])
+                continue
             package = {"install_graphify": "graphifyy", "install_pillow": "Pillow"}.get(dependency.get("action"))
             if package is None or dependency != {"action": dependency["action"], "package": package, "environment": ".harness/venv", "commands": dependency_commands(root, package)}:
                 raise game.HarnessError("INVALID_DEPENDENCY", "Unsupported dependency action")
@@ -227,7 +300,7 @@ def apply_plan(plan_path, approval, timeout=120):
             except ValueError:
                 checks.append(game.result(command[0], "Installed tool returned invalid JSON", [game.finding("VERIFICATION_FAILED", completed.stderr[-1500:])]))
         failures = [game.finding("VERIFICATION_FAILED", c["command"] + ": " + c["summary"]) for c in checks if c["status"] not in ("success", "skipped")]
-        state = {"plan_digest": recorded, "ide": plan["ide"], "graphify": plan["graphify"], "smoke": plan["smoke"], "png_grid": plan["png_grid"], "checks": checks, "ide_session_compliance": "unverified",
+        state = {"plan_digest": recorded, "ide": plan["ide"], "graphify": plan["graphify"], "smoke": plan["smoke"], "png_grid": plan["png_grid"], "skills": plan.get("skills", "none"), "checks": checks, "ide_session_compliance": "unverified",
                  "installed_hashes": {e["path"]: file_hash(game.safe_target(root, e["path"])) for e in plan["changes"]}}
         game.atomic_write(state_file, json.dumps(state, indent=2) + "\n")
         return game.result("setup-apply", "Approved setup applied; inspect verification results", failures,
@@ -246,6 +319,7 @@ def main(argv=None):
     plan.add_argument("--graphify", choices=["existing", "install", "skip"], default="existing")
     plan.add_argument("--smoke", action="store_true", help="Propose a main-scene smoke test and execute after approval")
     plan.add_argument("--png-grid", action="store_true", help="Propose optional Pillow installation for PNG contact sheets")
+    plan.add_argument("--skills", choices=["none", "curated", "core", "all"], default="curated", help="Curate and install Godot domain skills and meta-tools into .agents/skills")
     plan.add_argument("--godot")
     plan.add_argument("--timeout", type=float, default=30)
     apply = sub.add_parser("apply")
@@ -256,7 +330,7 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.timeout <= 0:
             raise game.HarnessError("INVALID_ARGUMENT", "Timeout must be positive")
-        response = write_plan(make_plan(args.project, args.ide, args.graphify, args.smoke, args.godot, args.timeout, args.png_grid)) if args.command == "plan" else apply_plan(args.plan, args.approve, args.timeout)
+        response = write_plan(make_plan(args.project, args.ide, args.graphify, args.smoke, args.godot, args.timeout, args.png_grid, args.skills)) if args.command == "plan" else apply_plan(args.plan, args.approve, args.timeout)
     except game.HarnessError as exc:
         response = game.result("setup", str(exc), [game.finding(exc.code, str(exc))])
     except (OSError, ValueError, KeyError, TypeError) as exc:

@@ -170,7 +170,7 @@ def inspect_context(root, explicit=None, timeout=30):
         Path(scratch, "project.godot").write_text("config_version=5\n", encoding="utf-8")
         env = {"GAME_PROJECT_CONFIG": str(root / "project.godot")}
         completed = run_headless_godot(["--script", str(TOOLS_DIR / "project_probe.gd")], env,
-                                      root=Path(scratch), godot=binary, timeout=timeout)
+                                      root=Path(scratch), godot=binary, timeout=max(timeout, 15))
         settings = engine_json(completed)
     source = "argument" if explicit else "environment" if os.environ.get("GODOT4_BIN") or os.environ.get("GODOT_BIN") else "discovery"
     hint = next((v for v in settings["features"] if re.fullmatch(r"4\.\d+(?:\.\d+)?", str(v))), None)

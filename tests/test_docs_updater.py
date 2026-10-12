@@ -2,8 +2,13 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import sys
 from pathlib import Path
 from types import SimpleNamespace
+
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from test_game_cli import ROOT
 
 spec = importlib.util.spec_from_file_location("docs", ROOT / "templates/core/tools/docs_updater.py")

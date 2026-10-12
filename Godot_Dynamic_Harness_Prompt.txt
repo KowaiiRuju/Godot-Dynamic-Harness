@@ -5,12 +5,13 @@ Use this harness to equip my Godot project and IDE agent with the right tools an
 1. Inspect existing project settings, instructions, tools and test inventory. Preserve current architecture and user customizations. Use existing Graphify queries before codebase investigations when a graph exists; verify relevant findings against source. Never claim an unsupported/missing graph ran.
 
 2. Run the harness checkout's planning command:
-   python bootstrap.py plan --project "<game root>" --ide antigravity
+   python bootstrap.py plan --project "<game root>" --ide antigravity --skills curated
    Choose vscode/both if requested. Select the actual --godot executable when discovery is ambiguous.
    If Graphify is missing, propose --graphify install; do not install it yet.
    Propose --smoke only when a generic main-scene test fits the observed startup flow.
-   Propose --png-grid for PNG comparison sheets if Pillow is missing; HTML galleries need no extra package. Dependency installation belongs in the reviewed plan.
-   Game-specific helpers/tests require an observed need and a reviewed proposal.
+   Propose --png-grid for PNG comparison sheets if Pillow is missing; HTML galleries need no extra package.
+   The harness automatically curates and plans skills into .agents/skills/ (Graphify, Ponytail, Prompt-Master, and Godot domain skills) tailored to the project's dimension and mechanics without blowing the agent context budget.
+   Dependency installation belongs in the reviewed plan. Game-specific helpers/tests require an observed need and a reviewed proposal.
 
 3. Present the generated Markdown plan to the user. Explain project findings, exact file/dependency actions, preserved files, conflicts, optional tests and verification limits. Ask what to adjust. DO NOT invoke apply or install tools until the user explicitly approves the exact plan. Regenerate after changing options or resolving conflicts.
 
@@ -41,4 +42,4 @@ Use this harness to equip my Godot project and IDE agent with the right tools an
 
 10. After source/config changes, refresh graph and project context. Keep concise decisions, next steps and unverified assumptions outside the checkpoint's managed block. Static scans, engine parsing/loading, screenshots, gameplay and device/release acceptance are separate gates.
 
-Do not bulk-install or delete skill libraries, automatically upgrade Godot, generate comprehensive gameplay suites, or add MCP/live-editor infrastructure without a separately reviewed need. Never claim agent compliance or token savings based only on generated Markdown files.
+Do not unreviewed bulk-install or destructively delete skill libraries, automatically upgrade Godot, generate comprehensive gameplay suites, or add MCP/live-editor infrastructure without a separately reviewed need. Never claim agent compliance or token savings based only on generated Markdown files.
