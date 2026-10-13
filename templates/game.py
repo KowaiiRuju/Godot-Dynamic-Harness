@@ -26,6 +26,11 @@ SKIP_DIRS = {".agents", ".harness", ".godot", ".git", ".venv", "venv", "addons",
 ENGINE_ERRORS = re.compile(r"(?m)^\s*(?:SCRIPT ERROR:|ERROR:|Parse Error:)|Assertion failed")
 
 
+def temp_directory(prefix):
+    kwargs = {"ignore_cleanup_errors": True} if sys.version_info >= (3, 10) else {}
+    return tempfile.TemporaryDirectory(prefix=prefix, **kwargs)
+
+
 class HarnessError(Exception):
     def __init__(self, code, message):
         super().__init__(message)
@@ -166,7 +171,7 @@ def inspect_context(root, explicit=None, timeout=30):
     flags = sorted(set(re.findall(r"--[\w-]+", help_result.stdout)) & {"--headless", "--script", "--path", "--import", "--check-only", "--rendering-method", "--audio-driver", "--version", "--help"})
     if "--headless" not in flags or "--script" not in flags:
         raise HarnessError("ENGINE_UNSUPPORTED", "Selected engine lacks --headless/--script")
-    with tempfile.TemporaryDirectory(prefix="gdh-probe-") as scratch:
+    with temp_directory(prefix="gdh-probe-") as scratch:
         Path(scratch, "project.godot").write_text("config_version=5\n", encoding="utf-8")
         env = {"GAME_PROJECT_CONFIG": str(root / "project.godot")}
         completed = run_headless_godot(["--script", str(TOOLS_DIR / "project_probe.gd")], env,
@@ -295,7 +300,7 @@ def cmd_graph(args):
         data = load_tool("godot_graph").extract(args.root, godot_files, load_tool("docs_updater").code_text)
         native_files = [p for suffix in (".py", ".cs") for p in project_files(args.root, suffix) if p != args.root / "game.py"]
         if native_files:
-            with tempfile.TemporaryDirectory(prefix="gdh-graph-") as scratch:
+            with temp_directory(prefix="gdh-graph-") as scratch:
                 for path in native_files:
                     target = Path(scratch) / path.relative_to(args.root)
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -393,7 +398,7 @@ def run_headless_godot(arguments, extra_env=None, capture_mode=False, *, root=PR
     if sys.platform not in ("win32", "linux") and arguments != ["--script", str(TOOLS_DIR / "project_probe.gd")]:
         raise HarnessError("ISOLATION_UNSUPPORTED", "Execution save-profile isolation is not implemented on this platform; configuration discovery remains available")
     env = os.environ.copy()
-    with tempfile.TemporaryDirectory(prefix="gdh-profile-") as profile:
+    with temp_directory(prefix="gdh-profile-") as profile:
         env.update(APPDATA=profile, LOCALAPPDATA=profile, XDG_DATA_HOME=profile,
                    XDG_CONFIG_HOME=profile, GAME_PROFILE_ROOT=profile)
         if extra_env:
@@ -402,7 +407,7 @@ def run_headless_godot(arguments, extra_env=None, capture_mode=False, *, root=PR
         if renderer:
             flags += ["--rendering-method", renderer]
         if arguments != ["--script", str(TOOLS_DIR / "project_probe.gd")]:
-            with tempfile.TemporaryDirectory(prefix="gdh-user-data-probe-") as scratch:
+            with temp_directory(prefix="gdh-user-data-probe-") as scratch:
                 Path(scratch, "project.godot").write_text("config_version=5\n", encoding="utf-8")
                 prepared = execute([godot or get_godot_bin(), "--path", scratch, "--headless", "--script", str(TOOLS_DIR / "project_probe.gd")],
                     cwd=scratch, env={**env, "GAME_PROJECT_CONFIG": str(root / "project.godot"), "GAME_PROFILE_CONFIG": str(Path(scratch, "project.godot"))}, timeout=timeout, log=False)
