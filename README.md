@@ -74,20 +74,32 @@ Run these inside the installed game's root. Common --project, --godot, --timeout
 
 ~~~powershell
 python game.py info --json
+python game.py plan-task "Fix player collision" --json
+python game.py scene-outline res://scenes/Player.tscn --json
 python game.py graph --json
 python game.py graph --refresh --timeout 120 --json
 python game.py graph --query "Main.tscn" --json
 python game.py context --refresh --json
 python game.py validate --json
-python game.py validate --engine --json
+python game.py validate --engine --orphans --uid --json
+python game.py audit --physics --exports --signals --perf --json
+python game.py assets res://assets/player.png --json
+python game.py assets --process res://assets/player.png --crop-alpha --scale 2 --json
+python game.py assets --grade res://assets/player.png --t1 9.0 --t2 8.5 --t3 9.0 --json
+python game.py saves --json
+python game.py baseline --save --scene res://Main.tscn --json
+python game.py baseline --check --scene res://Main.tscn --tolerance 1.0 --json
 python game.py syntax --scan . --json
 python game.py syntax --query export --json
+python game.py test --tier minor-logic --changed --json
 python game.py test --list --json
 python game.py test --json
 python game.py capture --json
 python game.py capture --scene res://Main.tscn --width 720 --height 1280 --json
 python game.py capture --scenes res://Menu.tscn res://Levels/Level01.tscn --json
 python game.py capture --all-scenes --json
+python game.py clean --audit --json
+python game.py clean --all --json
 ~~~
 
 info lists command-specific arguments and prerequisites from the same registrations as argparse. JSON mode returns one document with schema_version, command, status, context, summary, findings and artifacts. Logs are separate on stderr. failed/unsupported/invalid input/timeout exit nonzero. skipped means no work ran; it is not a passed test.

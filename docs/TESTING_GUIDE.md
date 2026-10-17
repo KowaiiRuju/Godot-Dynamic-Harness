@@ -126,7 +126,95 @@ When running batch capture (`--all-scenes`), the harness produces:
 
 ---
 
-## 5. Integrating with Continuous Delivery & Checkpoints
+## 5. Next-Gen Quality & Verification Capabilities
+
+### 5.1 Deterministic Task Routing (`plan-task`)
+For workhorse models (e.g. Gemini 3.8 / Flash), `plan-task` classifies change scope and selects the proportionate verification tier deterministically:
+```powershell
+python game.py plan-task "Fix ground collision offset in Player.tscn" --json
+```
+Returns:
+- `change_class`: `"Minor"` vs `"Major"`
+- `tier`: `"minor-doc"`, `"minor-visual"`, `"minor-logic"`, or `"major"`
+- `caveman_mode`: `"full"` (for coding/debugging token efficiency) or `"off"` (for prose/plans/lore)
+- Exact 4-step checklist with target verification command.
+
+### 5.2 Compact Scene Outlining (`scene-outline`)
+Strips huge binary tile data (`PackedByteArray`) and raw subresources from `.tscn` files to emit a compact summary:
+```powershell
+python game.py scene-outline res://scenes/Player.tscn --json
+```
+Returns node hierarchy, unique names (`%Player`), scripts, and signal connections in `< 40 lines`.
+
+### 5.3 Proportionate Test Tiers (`test --tier`)
+Run tests matching the change tier:
+```powershell
+# Only run tests related to git-changed files:
+python game.py test --changed --json
+
+# Run smoke or sanity suites:
+python game.py test --tier smoke --json
+python game.py test --tier sanity --json
+```
+For `minor-doc` and `minor-visual` tasks, `test` automatically skips heavy scene execution with an explicit skip status.
+
+### 5.4 Headless Layout Baseline Testing (`baseline`)
+Save or mathematically diff Control hierarchies and node rects without GPU overhead:
+```powershell
+# Save initial reference layout:
+python game.py baseline --save --scene res://Main.tscn --json
+
+# Verify layout against baseline (fails on missing/shifted nodes or font changes):
+python game.py baseline --check --scene res://Main.tscn --tolerance 1.0 --json
+```
+
+### 5.5 Asset Alpha & Aesthetic Rubric (`assets`)
+Detect halos, empty padding, fake checkerboards, and track 3-tier rubric scores:
+```powershell
+# Audit asset padding, fringes, and grid alignment:
+python game.py assets res://assets/player.png --json
+
+# Crop transparent padding and nearest-neighbor scale:
+python game.py assets --process res://assets/player.png --crop-alpha --scale 2 --json
+
+# Defringe semi-transparent border halos:
+python game.py assets --process res://assets/player.png --defringe --json
+
+# Grade against 3-tier rubric (stored in .harness/asset-manifest.json):
+python game.py assets --grade res://assets/player.png --t1 9.0 --t2 8.5 --t3 9.0 --json
+```
+
+### 5.6 In-Game Logic, Physics & Frame-Budget Audit (`audit`)
+Deeply inspect scene setups, collision layers, signal wiring, and frame budget:
+```powershell
+# Audit physics collision layers, missing colliders, and Y-sort:
+python game.py audit --physics --json
+
+# Audit hardcoded gameplay numbers that should be @export:
+python game.py audit --exports --json
+
+# Audit signal wiring to ensure target receiver methods exist:
+python game.py audit --signals --json
+
+# Detect expensive queries (get_node, $, find_child, load) in _process loops:
+python game.py audit --perf --json
+
+# Audit Scene-First UI policies:
+python game.py audit --scene-first --json
+```
+
+### 5.7 Save File & Repo Hygiene Verification
+```powershell
+# Inspect user:// and project save files:
+python game.py saves --json
+
+# Non-destructive repo hygiene audit (untracked tmp/bak files, uncommitted debug captures):
+python game.py clean --audit --json
+```
+
+---
+
+## 6. Integrating with Continuous Delivery & Checkpoints
 
 Whenever completing a testing tier:
 1. Refresh the project context and graph:
@@ -134,8 +222,9 @@ Whenever completing a testing tier:
    python game.py graph --refresh --json
    python game.py context --refresh --json
    ```
-2. Record verified status in `docs/harness/CHECKPOINT.md`:
-   - Record any known limits (e.g., untestable touch controls on desktop headless).
+2. Checkpoint outcomes are automatically recorded in `docs/harness/CHECKPOINT.md`:
+   - Strictly capped under `< 2 KB` to preserve workhorse model context budgets.
+   - Summarizes top 5 findings, top 5 artifacts, and next command hints.
 
 ---
 

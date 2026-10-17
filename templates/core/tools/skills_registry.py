@@ -24,6 +24,11 @@ REPOSITORIES = {
         "description": "Meta-prompt optimization and agent prompt tuning",
         "skills_subpath": ".",
     },
+    "caveman": {
+        "url": "https://github.com/JuliusBrussee/caveman.git",
+        "description": "Conditional ultra-compressed communication & subagent token-saving suite (caveman, cavecrew, caveman-compress)",
+        "skills_subpath": "skills",
+    },
 }
 
 CORE_SKILLS = [
@@ -46,6 +51,11 @@ SKILL_SPEC_MAP = {
     "graphify": ("graphify", "skill"),
     "ponytail": ("ponytail", "skills/ponytail"),
     "prompt-master": ("prompt_master", "."),
+    "caveman": ("caveman", "skills/caveman"),
+    "cavecrew": ("caveman", "skills/cavecrew"),
+    "caveman-compress": ("caveman", "skills/caveman-compress"),
+    "i-have-adhd": ("caveman", "skills/i-have-adhd"),
+    "image-bg-removal": ("caveman", "skills/image-bg-removal"),
 }
 
 
@@ -79,6 +89,13 @@ def detect_project_traits(root: Path, context: dict = None) -> dict:
         "has_quests": False,
         "has_save": False,
         "has_combat": False,
+        "has_multiplayer": False,
+        "has_shaders": False,
+        "has_particles": False,
+        "has_audio": False,
+        "has_navigation": False,
+        "has_state_machine": False,
+        "has_procedural": False,
     }
     context = context or {}
     settings = context.get("authored_settings", {})
@@ -106,6 +123,13 @@ def detect_project_traits(root: Path, context: dict = None) -> dict:
         "quests": re.compile(r"(quest|objective|mission|task_manager)", re.I),
         "save": re.compile(r"(save_load|savegame|game_state_save|user://.*\.save)", re.I),
         "combat": re.compile(r"(hitbox|hurtbox|health_component|damage|attack)", re.I),
+        "multiplayer": re.compile(r"\b(MultiplayerSpawner|MultiplayerSynchronizer|ENetMultiplayerPeer|rpc|rpc_id|multiplayer)\b", re.I),
+        "shaders": re.compile(r"\b(ShaderMaterial|VisualShader|\.gdshader|shader_type)\b", re.I),
+        "particles": re.compile(r"\b(GPUParticles2D|CPUParticles2D|GPUParticles3D|CPUParticles3D)\b"),
+        "audio": re.compile(r"\b(AudioStreamPlayer|AudioStreamPlayer2D|AudioStreamPlayer3D|AudioServer)\b"),
+        "navigation": re.compile(r"\b(NavigationAgent2D|NavigationAgent3D|NavigationRegion2D|NavigationRegion3D|NavigationServer2D|NavigationServer3D|AStar2D|AStar3D|AStarGrid2D)\b"),
+        "state_machine": re.compile(r"(state_machine|statemachine|fsm|finite_state|\bState\b)", re.I),
+        "procedural": re.compile(r"(procedural|procgen|dungeon_generator|wave_function_collapse|perlin|simplex|fastnoiselite)", re.I),
     }
 
     try:
@@ -115,7 +139,7 @@ def detect_project_traits(root: Path, context: dict = None) -> dict:
             if any(part in (".git", ".harness", ".agents", "screenshots", "qa-evidence") for part in path.parts):
                 continue
             name_lower = path.name.lower()
-            if path.suffix in (".tscn", ".gd"):
+            if path.suffix in (".tscn", ".gd", ".gdshader"):
                 scan_count += 1
                 if scan_count > 100:
                     break
@@ -139,6 +163,20 @@ def detect_project_traits(root: Path, context: dict = None) -> dict:
                     traits["has_save"] = True
                 if patterns["combat"].search(name_lower) or patterns["combat"].search(content):
                     traits["has_combat"] = True
+                if patterns["multiplayer"].search(name_lower) or patterns["multiplayer"].search(content):
+                    traits["has_multiplayer"] = True
+                if patterns["shaders"].search(name_lower) or patterns["shaders"].search(content):
+                    traits["has_shaders"] = True
+                if patterns["particles"].search(name_lower) or patterns["particles"].search(content):
+                    traits["has_particles"] = True
+                if patterns["audio"].search(name_lower) or patterns["audio"].search(content):
+                    traits["has_audio"] = True
+                if patterns["navigation"].search(name_lower) or patterns["navigation"].search(content):
+                    traits["has_navigation"] = True
+                if patterns["state_machine"].search(name_lower) or patterns["state_machine"].search(content):
+                    traits["has_state_machine"] = True
+                if patterns["procedural"].search(name_lower) or patterns["procedural"].search(content):
+                    traits["has_procedural"] = True
     except OSError:
         pass
 
@@ -149,7 +187,7 @@ def detect_project_traits(root: Path, context: dict = None) -> dict:
     return traits
 
 
-def curate_skills(root: Path, context: dict = None, mode: str = "curated") -> list:
+def curate_skills(root: Path, context: dict = None, mode: str = "curated", caveman_mode: str = "conditional") -> list:
     if mode == "none":
         return []
 
@@ -164,6 +202,12 @@ def curate_skills(root: Path, context: dict = None, mode: str = "curated") -> li
     for name in CORE_SKILLS:
         add_skill(name, "Core Godot & Agentic foundations (always retained)")
 
+    if caveman_mode in ("conditional", "always"):
+        add_skill("caveman", f"Token-efficient communication ({caveman_mode} mode)")
+        add_skill("cavecrew", "Token-compressed subagents for targeted investigations and edits")
+        add_skill("caveman-compress", "Memory file and natural language token compression")
+        add_skill("i-have-adhd", "High-clarity next-action ADHD focus and single-runner reuse")
+
     if mode == "core":
         return sorted(selected.values(), key=lambda s: s["name"])
 
@@ -174,6 +218,7 @@ def curate_skills(root: Path, context: dict = None, mode: str = "curated") -> li
         add_skill("godot-2d-physics", "2D collision and physics detected")
         add_skill("godot-2d-animation", "2D sprite animations detected")
         add_skill("godot-tilemap-mastery", "2D tilemap world building detected")
+        add_skill("image-bg-removal", "2D sprite background isolation and alpha defringing")
 
     if traits["is_3d"]:
         add_skill("godot-physics-3d", "3D physics detected")
@@ -200,5 +245,26 @@ def curate_skills(root: Path, context: dict = None, mode: str = "curated") -> li
 
     if traits["has_combat"]:
         add_skill("godot-combat-system", "Hitbox/hurtbox or combat mechanics detected")
+
+    if traits["has_multiplayer"]:
+        add_skill("godot-multiplayer", "Multiplayer synchronization or RPC detected")
+
+    if traits["has_shaders"]:
+        add_skill("godot-shaders", "Shaders or visual materials detected")
+
+    if traits["has_particles"]:
+        add_skill("godot-particles", "Particle systems detected")
+
+    if traits["has_audio"]:
+        add_skill("godot-audio-architecture", "AudioStreamPlayer or audio buses detected")
+
+    if traits["has_navigation"]:
+        add_skill("godot-navigation-2d" if traits["is_2d"] else "godot-navigation-3d", "Navigation and pathfinding detected")
+
+    if traits["has_state_machine"]:
+        add_skill("godot-state-machines", "Finite state machine patterns detected")
+
+    if traits["has_procedural"]:
+        add_skill("godot-procedural-generation", "Procedural generation or noise patterns detected")
 
     return sorted(selected.values(), key=lambda s: s["name"])

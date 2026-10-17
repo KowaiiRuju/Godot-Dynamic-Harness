@@ -29,6 +29,12 @@ def extract(root, files, code_text):
                 child = identifier + "::" + kind + "::" + name + "::L" + str(line)
                 node(child, name, relative, line, declaration_kind=kind)
                 link(identifier, child, "declares", relative, line)
+            extends_match = re.match(r"\s*extends\s+([\"']?)([\w/.:]+)\1", content)
+            if extends_match:
+                parent_type = extends_match.group(2)
+                parent_id = ("godot::" + parent_type.removeprefix("res://")) if "res://" in parent_type else ("godot::class::" + parent_type)
+                node(parent_id, parent_type, relative, line, is_builtin_or_type=True)
+                link(identifier, parent_id, "extends", relative, line)
         offset = 0
         for line, content in enumerate(text.splitlines(), 1):
             if file.suffix in (".tscn", ".tres"):
@@ -38,10 +44,27 @@ def extract(root, files, code_text):
                     child = identifier + "::node::" + attrs.get("parent", "") + "/" + name
                     node(child, name + " : " + attrs.get("type", "instance"), relative, line)
                     link(identifier, child, "contains_scene_node", relative, line)
+                elif content.startswith("[connection "):
+                    c_attrs = dict(re.findall(r'(\w+)="([^"\n]*)"', content))
+                    sig = c_attrs.get("signal", "signal")
+                    from_node = identifier + "::node::" + c_attrs.get("from", "")
+                    to_node = identifier + "::node::" + c_attrs.get("to", "")
+                    method = c_attrs.get("method", "")
+                    link(from_node, to_node, f"signals::{sig}::{method}", relative, line)
                 references = re.findall(r'^\[ext_resource\b.*?\bpath="(res://[^"\n]+)"', content)
+                uid_matches = re.findall(r'\buid="(uid://[^"\n]+)"', content)
+                for uid_val in uid_matches:
+                    uid_id = "godot::uid::" + uid_val
+                    node(uid_id, uid_val, relative, line, is_uid=True)
+                    link(identifier, uid_id, "has_uid", relative, line)
             else:
                 references = [match.group(1) for match in re.finditer(r'\b(?:load|preload)\s*\(\s*"(res://[^"\n]+)"', content)
                               if masked[offset + match.start():offset + match.start() + 4].strip()]
+                uid_matches = [match.group(1) for match in re.finditer(r'\b(?:load|preload)\s*\(\s*"(uid://[^"\n]+)"', content)]
+                for uid_val in uid_matches:
+                    uid_id = "godot::uid::" + uid_val
+                    node(uid_id, uid_val, relative, line, is_uid=True)
+                    link(identifier, uid_id, "loads_uid", relative, line)
             for reference in references:
                 target_path = reference.removeprefix("res://")
                 target = (root / target_path).resolve()

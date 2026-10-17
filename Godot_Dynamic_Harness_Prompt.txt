@@ -5,12 +5,12 @@ Use this harness to equip my Godot project and IDE agent with the right tools an
 1. Inspect existing project settings, instructions, tools and test inventory. Preserve current architecture and user customizations. Use existing Graphify queries before codebase investigations when a graph exists; verify relevant findings against source. Never claim an unsupported/missing graph ran.
 
 2. Run the harness checkout's planning command:
-   python bootstrap.py plan --project "<game root>" --ide antigravity --skills curated
+   python bootstrap.py plan --project "<game root>" --ide antigravity --skills curated --caveman conditional --canva-mcp optional
    Choose vscode/both if requested. Select the actual --godot executable when discovery is ambiguous.
    If Graphify is missing, propose --graphify install; do not install it yet.
    Propose --smoke only when a generic main-scene test fits the observed startup flow.
    Propose --png-grid for PNG comparison sheets if Pillow is missing; HTML galleries need no extra package.
-   The harness automatically curates and plans skills into .agents/skills/ (Graphify, Ponytail, Prompt-Master, and Godot domain skills) tailored to the project's dimension and mechanics without blowing the agent context budget.
+   The harness automatically curates and plans skills into .agents/skills/ (Graphify, Ponytail, Prompt-Master, Caveman, and Godot domain skills) tailored to the project's dimension and mechanics without blowing the agent context budget.
    Dependency installation belongs in the reviewed plan. Game-specific helpers/tests require an observed need and a reviewed proposal.
 
 3. Present the generated Markdown plan to the user. Explain project findings, exact file/dependency actions, preserved files, conflicts, optional tests and verification limits. Ask what to adjust. DO NOT invoke apply or install tools until the user explicitly approves the exact plan. Regenerate after changing options or resolving conflicts.
@@ -21,12 +21,17 @@ Use this harness to equip my Godot project and IDE agent with the right tools an
    AGENTS.md and selected IDE instructions
    docs/harness/PROJECT.md, TOOLS.md, CHECKPOINT.md
    graphify-out/graph.json and .harness freshness/setup state
-   Preserve user text outside managed blocks. Do not store secrets or copy entire chat logs.
+   Preserve user text outside managed blocks. Do not store secrets or copy entire chat logs. Enforce strict budget cap: CHECKPOINT.md remains under 2 KB.
 
 6. In each fresh session, read the concise project/tool/checkpoint documents and run:
    python game.py info --json
 
-7. Before each codebase investigation:
+7. Before planning multi-step work or editing:
+   python game.py plan-task "<task description>" --json
+   Follow the deterministic change tier (Minor/Major), Caveman mode (full for code/debug, off for prose/plans), and checklist.
+   For target scenes, inspect compact structure without raw byte bloat:
+   python game.py scene-outline res://scenes/Target.tscn --json
+   Before codebase investigations:
    python game.py graph --json
    python game.py graph --refresh --timeout 120 --json    (if missing/stale/untracked)
    python game.py graph --query "<specific file/symbol/question>" --json
@@ -35,10 +40,12 @@ Use this harness to equip my Godot project and IDE agent with the right tools an
 8. For development, inspect relevant .tscn before attached GDScript. Keep layout/themes/reusable UI components editable in scenes; scripts bind data, connect signals and implement behavior. Keep all scene elements, nodes, and attributes inspector-editable: expose gameplay tuning parameters, speeds, timers, thresholds, ranges, vitals, capacities, offsets, and scene references via @export (@export_group, @export_range, @export_enum) rather than hiding them in private script constants. For 2D top-down entities, align local origins (0, 0) to ground contact points, enable y_sort_enabled on parent sorting containers, and expose visual sprite offsets or y_sort_origin in the Inspector. Prefer typed GDScript, composition and the existing game's patterns. Do not impose a generic architecture or blanket ScrollContainer mouse-filter rule.
 
 9. Use info's real command/argument inventory and follow tiered testing strategies (see docs/TESTING_GUIDE.md):
-   - Smoke Testing: Run python game.py test --suite tests/test_harness_smoke.gd --json (or capture --json) after setup or engine switches to ensure the engine boots and autoloads run. Stop if it fails.
-   - Sanity Testing: Run focused suite/scene tests (python game.py test --suite <path> --json or capture --scene <path> --json) immediately after surgical edits to verify targeted behavior.
-   - Regression Testing: Run full test sweeps (python game.py test --json), batch captures (capture --all-scenes --json), engine checks (validate --engine --json), and syntax scans (syntax --scan . --json) before finishing tasks or committing. Review labeled gallery/contact sheets and manifests; batch failures stay visible.
-   Capture preserves the project renderer by default and requires graphics; engine execution is not sandboxed by save-profile isolation. Ephemeral debug captures automatically retain the 5 most recent runs; use python game.py clean --captures --json (or clean --all --json) to purge captures and QA review galleries before committing.
+   - Smoke Testing: Run python game.py test --tier smoke --json (or capture --json) after setup or engine switches to ensure the engine boots and autoloads run. Stop if it fails.
+   - Sanity Testing: Run focused suite/scene tests (python game.py test --suite <path> --json, python game.py test --changed --json, or capture --scene <path> --json) immediately after surgical edits to verify targeted behavior.
+   - Visual Baseline Testing: Run python game.py baseline --check --json to verify Control hierarchies and layout rects without GPU overhead.
+   - Asset & Logic Auditing: Run python game.py audit --physics --exports --signals --perf --json to verify collision layers, signals, and frame budgets. Run python game.py assets --audit --json to detect sprite halos and padding. Run python game.py saves --json to inspect user saves.
+   - Regression Testing: Run full test sweeps (python game.py test --json), batch captures (capture --all-scenes --json), engine checks (validate --engine --orphans --uid --json), and syntax scans (syntax --scan . --json) before finishing tasks or committing. Review labeled gallery/contact sheets and manifests; batch failures stay visible.
+   Capture preserves the project renderer by default and requires graphics; engine execution is not sandboxed by save-profile isolation. Ephemeral debug captures automatically retain the 5 most recent runs; use python game.py clean --audit --json to inspect hygiene and clean --captures --json (or clean --all --json) to purge captures and QA review galleries before committing.
 
 10. After source/config changes, refresh graph and project context. Keep concise decisions, next steps and unverified assumptions outside the checkpoint's managed block. Static scans, engine parsing/loading, screenshots, gameplay and device/release acceptance are separate gates.
 

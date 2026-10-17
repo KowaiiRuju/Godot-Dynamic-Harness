@@ -50,6 +50,7 @@ def pillow_available(root):
 
 
 def install_skills(root, skills_list, timeout=120):
+    import shutil
     cache_base = game.safe_target(root, ".harness/cache/skills")
     cache_base.mkdir(parents=True, exist_ok=True)
     cloned_repos = set()
@@ -60,12 +61,13 @@ def install_skills(root, skills_list, timeout=120):
         target = game.safe_target(root, f".agents/skills/{name}")
         target.mkdir(parents=True, exist_ok=True)
 
-        if name == "graphify":
-            bundled = TEMPLATES / "core/skills/graphify/SKILL.md"
-            if bundled.is_file():
-                game.atomic_write(target / "SKILL.md", bundled.read_text(encoding="utf-8"))
-                installed.append(name)
-                continue
+        bundled = TEMPLATES / "core/skills" / name / "SKILL.md"
+        if bundled.is_file():
+            bundled_dir = TEMPLATES / "core/skills" / name
+            shutil.copytree(str(bundled_dir), str(target), dirs_exist_ok=True)
+            shutil.rmtree(target / ".git", ignore_errors=True)
+            installed.append(name)
+            continue
 
         repo_key = item.get("repo_key")
         repo_url = item.get("repo_url")
@@ -81,8 +83,8 @@ def install_skills(root, skills_list, timeout=120):
 
             src = (repo_cache / subpath).resolve()
             if src.is_dir():
-                import shutil
                 shutil.copytree(str(src), str(target), dirs_exist_ok=True)
+                shutil.rmtree(target / ".git", ignore_errors=True)
                 installed.append(name)
             elif repo_cache.is_dir() and (repo_cache / "SKILL.md").is_file():
                 game.atomic_write(target / "SKILL.md", (repo_cache / "SKILL.md").read_text(encoding="utf-8"))
@@ -91,21 +93,26 @@ def install_skills(root, skills_list, timeout=120):
                 # In mock/test environment when git succeeded without writing to disk
                 game.atomic_write(target / "SKILL.md", f"---\nname: {name}\ndescription: {item.get('rationale', '')}\n---\n")
                 installed.append(name)
+        shutil.rmtree(target / ".git", ignore_errors=True)
     return installed
 
 
 def instruction_adapter():
     return """# Godot harness workflow
-Before codebase investigations, check python game.py graph --json, refresh missing/stale graphs, then use graph --query "<question>" --json. Verify findings against source.
-In fresh sessions read docs/harness/PROJECT.md, TOOLS.md, CHECKPOINT.md and AGENTS.md; run python game.py info --json.
-Inspect first, present a tailored plan, and wait for user review/approval before setup changes. Preserve user content.
-Keep graph/context current after code changes. Tool evidence is not gameplay or IDE-compliance proof.
+1. Workhorse Fast-Start: Run python game.py plan-task "<task>" --json for change class and steps. Inspect scenes via python game.py scene-outline <scene.tscn> --json before viewing targeted lines.
+2. Graphify Navigation: Before codebase investigations, check python game.py graph --json, refresh missing/stale graphs with graph --refresh --timeout 120 --json, then graph --query "<question>" --json. Verify findings against source.
+3. Fresh Sessions: Read docs/harness/PROJECT.md, TOOLS.md, CHECKPOINT.md and AGENTS.md; run python game.py info --json.
+4. Conditional Caveman: Use Caveman mode (full/lite) + cavecrew for coding, bugfixing, tuning, and QA. Switch to normal prose for plans, docs, dialogue/lore, and walkthroughs.
+5. Autonomous Safe Execution: Once a plan is approved, execute all phases autonomously end-to-end. Do not prompt for repeated intermediate approvals.
+6. Proportionate Verification: Minor changes run targeted syntax/suite/baseline checks. Major changes run full test/capture/validation sweeps.
+7. Scene-First & Inspector-First: Build UI in .tscn hierarchy (no procedural UI). Expose gameplay numbers with @export. Align 2D top-down origins to ground contact and enable y_sort_enabled.
+8. Single Runner Reuse: Keep graph/context current. Use game.py unified CLI tools instead of creating ad-hoc runners.
 """
 
 
-def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=None, timeout=30, png_grid=False, skills="none"):
+def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=None, timeout=30, png_grid=False, skills="none", caveman="conditional", canva_mcp="optional"):
     root = game.resolve_project(str(root))
-    context = {"project_root": str(root)}
+    context = {"project_root": str(root), "caveman": caveman, "canva_mcp": canva_mcp}
     try:
         context.update(game.inspect_context(root, godot, timeout))
     except game.HarnessError as exc:
@@ -168,11 +175,12 @@ def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=N
         conflicts.append("Graphify is missing: regenerate with --graphify install, or explicitly select skip")
     selected_skills = []
     if skills != "none":
-        selected_skills = skills_registry.curate_skills(root, context, mode=skills)
+        selected_skills = skills_registry.curate_skills(root, context, mode=skills, caveman_mode=caveman)
         if selected_skills:
             dependencies.append({
                 "action": "install_skills",
                 "mode": skills,
+                "caveman": caveman,
                 "skills": selected_skills,
                 "target_dir": ".agents/skills",
             })
@@ -183,6 +191,7 @@ def make_plan(root, ide="antigravity", graphify="existing", smoke=False, godot=N
     plan = dict(schema_version=1, project_root=str(root), source_snapshot=source_snapshot(),
                 graph_before_sha256=file_hash(game.safe_target(root, "graphify-out/graph.json")),
                 project_digest=game.fingerprint(root), context=context, ide=ide, graphify=graphify, smoke=smoke, png_grid=png_grid, skills=skills,
+                caveman=caveman, canva_mcp=canva_mcp,
                 changes=changes, dependencies=dependencies, preserved=preserved, conflicts=conflicts,
                 created_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 post_apply_actions=post_apply)
@@ -197,7 +206,7 @@ def write_plan(plan):
     review = game.safe_target(root, "tasks/godot-harness-setup-" + identifier[:12] + ".md")
     sections = ["# Godot harness setup plan", "Status: awaiting explicit user review/approval.",
                 "Review with your IDE agent. Adjust options by generating a new plan; no installation or game execution has occurred.",
-                f"IDE: {plan['ide']}. Graphify: {plan['graphify']}. Main-scene smoke test: {plan['smoke']}. PNG review grids: {plan['png_grid']}. Skills: {plan.get('skills', 'none')}.",
+                f"IDE: {plan['ide']}. Graphify: {plan['graphify']}. Main-scene smoke test: {plan['smoke']}. PNG review grids: {plan['png_grid']}. Skills: {plan.get('skills', 'none')}. Caveman: {plan.get('caveman', 'conditional')}. Canva MCP: {plan.get('canva_mcp', 'optional')}.",
                 "Project context:\n~~~json\n" + json.dumps(plan["context"], indent=2) + "\n~~~",
                 "Dependencies:\n~~~json\n" + json.dumps(plan["dependencies"], indent=2) + "\n~~~",
                 "Post-apply actions:\n" + "\n".join("- " + p for p in plan["post_apply_actions"]),
@@ -300,7 +309,7 @@ def apply_plan(plan_path, approval, timeout=120):
             except ValueError:
                 checks.append(game.result(command[0], "Installed tool returned invalid JSON", [game.finding("VERIFICATION_FAILED", completed.stderr[-1500:])]))
         failures = [game.finding("VERIFICATION_FAILED", c["command"] + ": " + c["summary"]) for c in checks if c["status"] not in ("success", "skipped")]
-        state = {"plan_digest": recorded, "ide": plan["ide"], "graphify": plan["graphify"], "smoke": plan["smoke"], "png_grid": plan["png_grid"], "skills": plan.get("skills", "none"), "checks": checks, "ide_session_compliance": "unverified",
+        state = {"plan_digest": recorded, "ide": plan["ide"], "graphify": plan["graphify"], "smoke": plan["smoke"], "png_grid": plan["png_grid"], "skills": plan.get("skills", "none"), "caveman": plan.get("caveman", "conditional"), "canva_mcp": plan.get("canva_mcp", "optional"), "checks": checks, "ide_session_compliance": "unverified",
                  "installed_hashes": {e["path"]: file_hash(game.safe_target(root, e["path"])) for e in plan["changes"]}}
         game.atomic_write(state_file, json.dumps(state, indent=2) + "\n")
         return game.result("setup-apply", "Approved setup applied; inspect verification results", failures,
@@ -320,6 +329,8 @@ def main(argv=None):
     plan.add_argument("--smoke", action="store_true", help="Propose a main-scene smoke test and execute after approval")
     plan.add_argument("--png-grid", action="store_true", help="Propose optional Pillow installation for PNG contact sheets")
     plan.add_argument("--skills", choices=["none", "curated", "core", "all"], default="curated", help="Curate and install Godot domain skills and meta-tools into .agents/skills")
+    plan.add_argument("--caveman", choices=["conditional", "always", "off"], default="conditional", help="Terse communication policy (conditional: active for low-writing tasks, normal prose for plans/docs/lore)")
+    plan.add_argument("--canva-mcp", choices=["optional", "enabled", "disabled"], default="optional", help="Canva MCP integration mode for visual assets")
     plan.add_argument("--godot")
     plan.add_argument("--timeout", type=float, default=30)
     apply = sub.add_parser("apply")
@@ -330,7 +341,7 @@ def main(argv=None):
         args = parser.parse_args(argv)
         if args.timeout <= 0:
             raise game.HarnessError("INVALID_ARGUMENT", "Timeout must be positive")
-        response = write_plan(make_plan(args.project, args.ide, args.graphify, args.smoke, args.godot, args.timeout, args.png_grid, args.skills)) if args.command == "plan" else apply_plan(args.plan, args.approve, args.timeout)
+        response = write_plan(make_plan(args.project, args.ide, args.graphify, args.smoke, args.godot, args.timeout, args.png_grid, args.skills, args.caveman, args.canva_mcp)) if args.command == "plan" else apply_plan(args.plan, args.approve, args.timeout)
     except game.HarnessError as exc:
         response = game.result("setup", str(exc), [game.finding(exc.code, str(exc))])
     except (OSError, ValueError, KeyError, TypeError) as exc:
