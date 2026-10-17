@@ -51,6 +51,18 @@ def pillow_available(root):
 
 def install_skills(root, skills_list, timeout=120):
     import shutil
+    import stat
+    def safe_rmtree(p):
+        if not Path(p).exists():
+            return
+        def _on_error(func, path, _exc):
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except Exception:
+                pass
+        shutil.rmtree(p, onerror=_on_error)
+
     cache_base = game.safe_target(root, ".harness/cache/skills")
     cache_base.mkdir(parents=True, exist_ok=True)
     cloned_repos = set()
@@ -64,8 +76,8 @@ def install_skills(root, skills_list, timeout=120):
         bundled = TEMPLATES / "core/skills" / name / "SKILL.md"
         if bundled.is_file():
             bundled_dir = TEMPLATES / "core/skills" / name
-            shutil.copytree(str(bundled_dir), str(target), dirs_exist_ok=True)
-            shutil.rmtree(target / ".git", ignore_errors=True)
+            shutil.copytree(str(bundled_dir), str(target), dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git"))
+            safe_rmtree(target / ".git")
             installed.append(name)
             continue
 
@@ -83,8 +95,8 @@ def install_skills(root, skills_list, timeout=120):
 
             src = (repo_cache / subpath).resolve()
             if src.is_dir():
-                shutil.copytree(str(src), str(target), dirs_exist_ok=True)
-                shutil.rmtree(target / ".git", ignore_errors=True)
+                shutil.copytree(str(src), str(target), dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git"))
+                safe_rmtree(target / ".git")
                 installed.append(name)
             elif repo_cache.is_dir() and (repo_cache / "SKILL.md").is_file():
                 game.atomic_write(target / "SKILL.md", (repo_cache / "SKILL.md").read_text(encoding="utf-8"))
@@ -93,7 +105,7 @@ def install_skills(root, skills_list, timeout=120):
                 # In mock/test environment when git succeeded without writing to disk
                 game.atomic_write(target / "SKILL.md", f"---\nname: {name}\ndescription: {item.get('rationale', '')}\n---\n")
                 installed.append(name)
-        shutil.rmtree(target / ".git", ignore_errors=True)
+        safe_rmtree(target / ".git")
     return installed
 
 
