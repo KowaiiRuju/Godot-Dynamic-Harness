@@ -175,6 +175,37 @@ The generated `AGENTS.md` strictly binds agents to the **Scene-First** law:
 
 ---
 
+## 🧠 Persistent Graphify Navigation
+
+The harness includes a source-located AST index for Godot function/signal/class declarations, scene nodes, and explicit `res://` resource references, and uses Graphify to query it:
+- Freshness uses source-content and graph digests across processes.
+- Query scoped dependencies quickly using `python game.py graph --query "<question>" --json`.
+- Project Python and GDScript files use AST extraction while excluding external engine binaries.
+- Stale graphs can be rebuilt on-demand with `python game.py graph --refresh --json`.
+
+---
+
+## 🧪 Test Suite & Verification
+
+Run the comprehensive unit and integration test suite:
+
+```powershell
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+All 52 unit and engine integration tests verify project discovery, offscreen rendering, manifest validation, CLI options, and bootstrap behavior against Godot 4.x.
+
+---
+
+## 📚 Official References
+
+- [Godot command-line tools](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html)
+- [Godot project settings](https://docs.godotengine.org/en/stable/classes/class_projectsettings.html)
+- [Antigravity persistent workspace rules](https://www.antigravity.google/docs/rules/)
+- [VS Code repository instructions](https://code.visualstudio.com/docs/agent-customization/custom-instructions)
+
+---
+
 ## 🤝 Contributing
 
 Contributions, additional domain skills, and game genre templates are welcome! Feel free to open an issue or submit a PR.

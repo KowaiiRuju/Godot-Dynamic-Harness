@@ -896,7 +896,7 @@ def cmd_capture(args):
     scenes = list(dict.fromkeys(scenes))
     if args.output:
         output = safe_target(args.root, args.output)
-        if output.is_dir():
+        if getattr(args, "clean", False) and output.is_dir():
             safe_rmtree(output)
         output.mkdir(parents=True, exist_ok=True)
     else:

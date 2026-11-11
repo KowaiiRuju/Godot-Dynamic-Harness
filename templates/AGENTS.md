@@ -19,7 +19,7 @@ This document defines the universal architectural standards, Scene-First authori
 ## 2. Mandatory Inspector-Editable Nodes & Attributes
 
 - **Expose Tunables via `@export`**: Expose all configurable gameplay parameters (movement speeds, cooldowns, timers, ranges, vitals, capacities) via `@export`, `@export_group`, `@export_range`, `@export_enum`. Never bury tunable numbers in private script constants.
-- **Explicit 2D Y-Sorting**: Parent sorting containers MUST have `y_sort_enabled = true`. 2D top-down entities MUST align their sorting pivot with their ground contact point (`y_sort_origin` or `Sprite2D` offset).
+- **Explicit 2D Y-Sorting**: Parent sorting containers MUST have `y_sort_enabled = true`. 2D top-down entities MUST align their sorting pivot with their ground contact point (`y_sort_origin` or `Sprite2D` offset). Visual shadows must be separate child nodes/shaders, never baked into collision shapes.
 
 ---
 
@@ -52,58 +52,28 @@ Before editing code, declare:
 
 ---
 
-## 5. The 15 Unified `game.py` CLI Subcommands
+## 5. Conditional Caveman Protocol (`https://github.com/JuliusBrussee/caveman.git`)
 
-The harness provides a single zero-dependency CLI runner (`game.py`) at the project root covering the full development and QA lifecycle:
-
-| Subcommand | Description & Primary Use Case |
-| :--- | :--- |
-| **`info`** | Displays detected Godot executable, engine version, renderer, viewport dimensions, and discovered tests. |
-| **`route-prompt`** | 3-Layer deterministic prompt-to-skill and mode router with audit logging in `.agent-state/logs/router_audit.jsonl`. |
-| **`plan-task`** | Single-command prompt routing + structured task plan synthesis with affected files and test ladders. |
-| **`scene-outline`** | Fast scene node hierarchy and Control layout inspection without dumping massive raw `.tscn` text. |
-| **`capture`** | Offscreen viewport snapshot rendering to PNG via isolated QA profile (never crashes open Godot Editor). |
-| **`baseline`** | Golden visual screenshot regression testing and pixel diff comparison. |
-| **`test`** | Discovers and executes headless GDScript test suites under `tests/test_*.gd`. |
-| **`validate`** | Static scene integrity, broken `ExtResource` paths, and procedural UI anti-pattern checks. |
-| **`assets`** | Asset catalog scan, texture atlas tracking, and orphaned asset detection. |
-| **`audit`** | Control node layout audit (bounding boxes, clipping, and font sizes via `scene_manifest.json`). |
-| **`saves`** | Inspect, validate, backup, or wipe persistent save state files in `user://`. |
-| **`syntax`** | Validates GDScript against Godot 3.x vs 4.x deprecations, and learns project-specific syntax memory. |
-| **`graph`** | AST-driven knowledge graph queries, neighbor traversal, and concept explanations via Graphify. |
-| **`context`** | Generates or refreshes persistent project context markdown and architecture summaries. |
-| **`clean`** | Cleans orphaned temporary files, debug screenshots, and stale QA caches. |
+- **USE Caveman (`full` or `lite`) + `cavecrew` Subagents** when the task does **NOT** require heavy writing:
+  - Routine code/scene edits, bug fixes, `@export` exposure, physics/collision tuning, test/capture commands, and codebase lookups.
+  - Drop filler, drop articles, keep technical substance exact. Saves ~65% output and context tokens.
+- **DO NOT USE Caveman (`off` / Normal Prose)** when the task **requires writing or rich explanation**:
+  - `implementation_plan.md`, architecture/GDD documentation, in-game dialogue/quest/lore text, UI copywriting, user requests to "explain" or "walk me through", git commit/PR bodies for humans, and safety/irreversible warnings.
 
 ---
 
-## 6. Architecture: The Godot Layer Cake
+## 6. ADHD Communication & Single-Runner Reuse (`i-have-adhd`)
 
-Organize game systems into four strictly decoupled layers:
-1. **Presentation** (UI / HUD / VFX / Audio): Listens to signals, displays state. Never owns data or alters game state directly.
-2. **Logic** (State Machines / Components / Controllers): Queries data, manages state transitions and mechanics.
-3. **Data** (`Resource` / `.tres`): Single serializable source of truth for stats, inventory items, quests, dialogue trees.
-4. **Infrastructure** (Autoload singletons): Global managers (SaveManager, AudioBus, SignalBus). Communicates via "Signal Up, Call Down".
+- **i-have-adhd Directness**: Lead with the concrete next action. Number multi-step work. Suppress tangents. Restate state every turn. Cap lists to 5 items.
+- **Single-Runner Tool Reuse**: Never author ad-hoc runner scripts. Reuse the unified `python game.py` CLI tools (`route-prompt`, `plan-task`, `scene-outline`, `test`, `capture`, `baseline`, `audit`, `assets`, `saves`, `validate`, `clean`).
+- **Prune Capture Evidence**: Purge ephemeral debug captures using `python game.py clean --captures --json` before milestone completion or commits.
 
 ---
 
-## 7. Multi-Agent Concurrency & Advisory File Locking (`tools/agent_lock.py`)
+## 7. Visual Assets & Provider-Agnostic Workflow
 
-When multiple agents or parallel subagents collaborate:
-- **Acquire Lease Before Writing**:
-  ```powershell
-  python tools/agent_lock.py acquire <files...> --agent <agent_id> --task <task_id> --json
-  ```
-- **Disjoint Writable Paths**: Multi-agent tasks operate on strictly non-overlapping writable paths. Shared entry points (`project.godot`, autoload singletons, `game.py`) belong exclusively to the Lead agent.
-- **Yield on Collision**: If a lock collision occurs, halt the affected slice immediately and report the conflict to the lead. Never bypass locks.
-- **Write-Off Changes**:
-  ```powershell
-  python tools/agent_lock.py write-off <files...> --agent <agent_id> --summary "<summary>" --json
-  ```
-
----
-
-## 8. Ponytail YAGNI & Anti-Bloat Mandate
-
-- Rely on Godot's built-in nodes (`Timer`, `PathFollow2D`/`3D`, `VisibleOnScreenNotifier`, `NavigationAgent`) and typed GDScript functions before engineering custom framework layers.
-- Avoid speculative abstractions or systems for features not yet requested.
-- Controls inside any `ScrollContainer` must set `mouse_filter = 1 (Pass)` or `2 (Ignore)` so dragging is never swallowed.
+- **Canva MCP & Local Tools**: Use Canva MCP when available (`--canva-mcp optional|enabled`). When Canva MCP is absent, fallback to local PIL / `transparent-background` via `python game.py assets --process`.
+- **3-Tier Asset Grading Rubric**: Every asset must score >= 8.5 on:
+  1. **Fit on Game (1–10)**: Theme, perspective, scale harmony.
+  2. **Style (1–10)**: Palette compliance, crisp outlines, no blurry AI fringe.
+  3. **Composition (1–10)**: Readable silhouette, clean alpha channel.

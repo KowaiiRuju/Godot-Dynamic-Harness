@@ -9,7 +9,9 @@ screenshots/
 *.jpeg
 *.webp
 qa_capture_results.json
+qa-evidence/
 scene_manifest.json
+batch_results.json
 
 # Cross-agent handoff state (local only; regenerate with `game.py handoff save`)
 .harness/
