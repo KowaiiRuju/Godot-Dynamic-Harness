@@ -29,12 +29,19 @@ REPOSITORIES = {
         "description": "Conditional ultra-compressed communication & subagent token-saving suite (caveman, cavecrew, caveman-compress)",
         "skills_subpath": "skills",
     },
+    "bundled": {
+        "url": None,
+        "description": "Bundled GDH harness core skill",
+        "skills_subpath": ".",
+    },
 }
 
 CORE_SKILLS = [
     "graphify",
     "ponytail",
     "prompt-master",
+    "agent-coordination",
+    "token-budget",
     "godot-master",
     "godot-gdscript-mastery",
     "godot-project-foundations",
@@ -56,6 +63,10 @@ SKILL_SPEC_MAP = {
     "caveman-compress": ("caveman", "skills/caveman-compress"),
     "i-have-adhd": ("caveman", "skills/i-have-adhd"),
     "image-bg-removal": ("caveman", "skills/image-bg-removal"),
+    "agent-coordination": ("bundled", "agent-coordination"),
+    "token-budget": ("bundled", "token-budget"),
+    "godot-agent-vision": ("bundled", "godot-agent-vision"),
+    "pixel-art-gen": ("bundled", "pixel-art-gen"),
 }
 
 

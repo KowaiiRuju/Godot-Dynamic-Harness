@@ -106,6 +106,12 @@ if ($HasLocalTemplates) {
             Write-Host "  ✓ tests/test_smoke.gd deployed." -ForegroundColor Green
         }
     }
+    # Copy bundled skills (agent-coordination, token-budget, godot-agent-vision, caveman, etc.)
+    $SrcCoreSkills = Join-Path $LocalTemplatesDir "core\skills"
+    if (Test-Path $SrcCoreSkills) {
+        Copy-Item -Path (Join-Path $SrcCoreSkills "*") -Destination $SkillsDir -Force -Recurse
+        Write-Host "  ✓ core/skills/* deployed (agent-coordination, token-budget, godot-agent-vision, caveman suite)." -ForegroundColor Green
+    }
 } else {
     Write-Host "  ℹ Running in standalone remote mode. Generating baseline rules..." -ForegroundColor Cyan
 }
