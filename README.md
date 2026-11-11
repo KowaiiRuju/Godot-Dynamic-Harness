@@ -1,25 +1,26 @@
-# 🎮 Godot Dynamic Harness
+# 🎮 Godot Dynamic Harness (GDH)
 
 [![Godot Engine](https://img.shields.io/badge/Godot-4.7%2B-478CBF?logo=godotengine&logoColor=white)](https://godotengine.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![AI Agent Ready](https://img.shields.io/badge/Agents-Antigravity%20%7C%20Claude%20Code%20%7C%20Cursor-7C3AED)](https://github.com/KowaiiRuju/Godot-Dynamic-Harness)
+[![AI Agent Ready](https://img.shields.io/badge/Agents-Antigravity%20%7C%20Claude%20Code%20%7C%20Cursor%20%7C%20Codex-7C3AED)](https://github.com/KowaiiRuju/Godot-Dynamic-Harness)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/KowaiiRuju/Godot-Dynamic-Harness/pulls)
 
-A universal, context-aware AI agent setup harness and rule framework for **any Godot 4.7+ game project**. 
+A universal, context-aware AI agent harness, 8-step workflow, and rule framework for **any Godot 4.7+ game project**.
 
-Instead of dumping bloated generic rules or quiz-specific scaffolding into your game, the **Godot Dynamic Harness** instructs coding agents (Google Antigravity, Claude Code, Cursor, Codex) to read your project slowly, deduce your game's genre and dimensions (2D/3D RPG, platformer, action, strategy), install and curate the **44 Godot Domain Skills**, enforce **Scene-First UI construction**, and deploy an offscreen **headless scene capture & test suite**.
+Instead of dumping bloated generic rules or quiz-specific scaffolding into your game, the **Godot Dynamic Harness** instructs coding agents (Google Antigravity, Claude Code, Cursor, Codex, Windsurf) to inspect your project slowly, deduce your game's genre and dimensions (2D/3D RPG, platformer, action, strategy), install and curate the **44 Godot Domain Skills**, enforce **Scene-First UI & Inspector-First `@export` construction**, coordinate multi-agent file leases with **advisory locking**, and deploy a complete **15-subcommand headless test and capture suite** (`game.py`).
 
 ---
 
 ## 🌟 Why Godot Dynamic Harness?
 
-Most AI coding assistants fail in Godot projects because they:
+Most AI coding assistants struggle in Godot projects because they:
 1. **Spam dynamic UI code**: They write messy `Control.new()` and `add_theme_*_override()` in GDScript instead of building editable `.tscn` scene trees in the Godot Editor.
 2. **Pollute context windows**: They load dozens of irrelevant skills (e.g. loading 3D lighting and multiplayer networking for a 2D single-player pixel RPG).
 3. **Lock up the editor**: They run headless tests using the default user directory, freezing or corrupting state when the Godot Editor is already open.
 4. **Lack visual proof**: They guess whether menus, HUDs, or inventory windows fit the screen rather than looking at real rendered pixels.
+5. **Clobber parallel edits**: Multiple autonomous agents or humans edit the same files simultaneously without concurrency safety or leases.
 
-**Godot Dynamic Harness solves all four out of the box.**
+**Godot Dynamic Harness solves all five out of the box.**
 
 ---
 
@@ -35,13 +36,104 @@ Most AI coding assistants fail in Godot projects because they:
 │  - Genre & Systems detection │  - Prompt Master (Meta-AI)    │
 │  (RPG, Action, Mobile, etc.) │  - 44 Curated Godot Skills    │
 ├──────────────────────────────┼───────────────────────────────┤
-│  3. SCENE-FIRST RULES        │  4. HEADLESS HARNESS          │
-│  - UI ground truth = .tscn   │  - Offscreen viewport capture │
+│  3. SCENE-FIRST & LOCKS      │  4. UNIFIED HARNESS (game.py) │
+│  - UI ground truth = .tscn   │  - 15 unified CLI subcommands │
 │  - Zero dynamic Control.new()│  - Isolated APPDATA profile   │
-│  - Layer Cake architecture   │  - Node rect & font manifest  │
-│  - "Signal Up, Call Down"    │  - python game.py CLI runner  │
+│  - Inspector-first @export   │  - Offscreen viewport capture │
+│  - Multi-agent file locking  │  - Headless test & QA runner  │
 └──────────────────────────────┴───────────────────────────────┘
 ```
+
+---
+
+## 🔄 The 8-Step Godot Dynamic Harness Workflow
+
+Every agent operation follows this structured lifecycle:
+
+| Step | Phase | Action & CLI Command |
+| :---: | :--- | :--- |
+| **0** | **Pre-Flight Router & Plan** | `python game.py route-prompt --prompt "<task>" --json` or `python game.py plan-task "<task>" --json` |
+| **1** | **Skill Reads & Graph Query** | Read `matched_skill_paths`. Query `graphify query "<feature>"` or inspect with `python game.py scene-outline <scene>`. |
+| **2** | **Change Classification & Locks** | Declare **Minor** vs **Major**. When `multi_agent: true`, run `python tools/agent_lock.py acquire <files...>`. |
+| **3** | **Scene-First Implementation** | Build visual trees in `.tscn`. Expose tunables with `@export`. Bound GDScript via `%SceneUniqueNames`. |
+| **4** | **Proportionate Verification** | Minor: targeted syntax & test suite. Major: full test, capture, and engine validation sweeps. |
+| **5** | **Visual Verification** | Render offscreen pixel-perfect snapshots via `python game.py capture --scene <scene>`. |
+| **6** | **Write-Off Journaling** | Conclude edits with SHA-256 hashes: `python tools/agent_lock.py write-off <files...> --agent <id>`. |
+| **7** | **Context & Graph Refresh** | Run `python game.py context --refresh` and `graphify update .`. |
+
+---
+
+## 🛠️ The 15 Unified `game.py` Subcommands
+
+The harness provides a zero-dependency Python CLI runner at the project root covering the complete development, QA, and maintenance lifecycle:
+
+```bash
+# 1. Environment & Project Status
+python game.py info
+
+# 2. Prompt & Skill Routing
+python game.py route-prompt --prompt "Fix inventory slot dragging" --json
+
+# 3. Structured Task Planning
+python game.py plan-task "Add crafting recipe table" --json
+
+# 4. Fast Scene Outline Inspection (No raw .tscn dump)
+python game.py scene-outline scenes/ui/hud.tscn
+
+# 5. Offscreen Scene Capture (Isolated QA profile, safe with Editor open)
+python game.py capture --scene res://scenes/ui/hud.tscn
+
+# 6. Visual Baseline Regression Testing
+python game.py baseline --check
+
+# 7. Headless GDScript Test Runner
+python game.py test
+
+# 8. Project Validation & Scene-First Integrity
+python game.py validate
+
+# 9. Asset Catalog & Orphan Detection
+python game.py assets
+
+# 10. Layout, Bounding Box & Font Audit
+python game.py audit
+
+# 11. Persistent Save File Management
+python game.py saves
+
+# 12. GDScript Syntax Scan & Version Memory
+python game.py syntax --scan .
+
+# 13. Codebase Knowledge Graph Traversal
+python game.py graph --query "InventoryManager"
+
+# 14. Persistent Context Summary Generation
+python game.py context --refresh
+
+# 15. Temporary File & Cache Cleanup
+python game.py clean
+```
+
+> **Why the isolated profile matters:**
+> `game.py capture` routes offscreen execution through an isolated `APPDATA` directory (`<project>_godot_qa_profile`). You can run test suites and visual captures in your terminal continuously **while Godot Editor stays open**, without engine lockups or crashes.
+
+---
+
+## 🔒 Multi-Agent Concurrency & Advisory File Locking (`tools/agent_lock.py`)
+
+For multi-agent swarms or teams working in parallel:
+- **Acquire Lease Before Writing**:
+  ```bash
+  python tools/agent_lock.py acquire scripts/player.gd scenes/player.tscn --agent worker-1 --task player-move --json
+  ```
+- **Check Active Leases**:
+  ```bash
+  python tools/agent_lock.py status --json
+  ```
+- **Write-Off Changes with SHA-256 Integrity Hashes**:
+  ```bash
+  python tools/agent_lock.py write-off scripts/player.gd scenes/player.tscn --agent worker-1 --summary "Added jump buffering" --json
+  ```
 
 ---
 
@@ -52,91 +144,23 @@ Most AI coding assistants fail in Godot projects because they:
 1. Open your game project in **Google Antigravity**, **Claude Code**, or **Cursor**.
 2. Open [`Godot_Dynamic_Harness_Prompt.txt`](Godot_Dynamic_Harness_Prompt.txt).
 3. Copy the prompt block and paste it into your agent chat.
-4. Watch the agent analyze your game, curate the exact skills needed, write `AGENTS.md`, and verify with a headless smoke test!
+4. Watch the agent analyze your game, curate the exact skills needed, install rules and tools, and verify with a headless smoke test!
 
 ---
 
 ### Method 2: One-Liner PowerShell Bootstrap
 
-Run this command inside your Godot project's root folder to pull the core meta-tools and skill libraries:
+Run this command inside your Godot project root folder to install the harness:
 
 ```powershell
 irm https://raw.githubusercontent.com/KowaiiRuju/Godot-Dynamic-Harness/main/setup.ps1 | iex
 ```
 
-Or clone manually:
+Or deploy from a local clone:
 
 ```powershell
-# 1. Install Graphify (AST Codebase Knowledge Graph)
-pip install graphifyy
-graphify install
-
-# 2. Ensure .agents/skills exists
-mkdir -p .agents/skills
-
-# 3. Pull Ponytail (YAGNI & Anti-Bloat)
-git clone https://github.com/DietrichGebert/ponytail.git .agents/skills/ponytail
-
-# 4. Pull Prompt Master
-git clone https://github.com/nidhinjs/prompt-master.git .agents/skills/prompt-master
-
-# 5. Pull the 44 Godot Domain Skills
-git clone https://github.com/thedivergentai/GD-Agentic-Skills.git .agents/skills/gd-agentic-skills
+powershell -File C:\Path\To\GDH\setup.ps1 -TargetProject C:\Path\To\MyGame
 ```
-
----
-
-## 📦 Built-In External Skills & Repositories
-
-| Tool / Skill | Upstream Repository | Purpose |
-| :--- | :--- | :--- |
-| **GD-Agentic-Skills** | [thedivergentai/GD-Agentic-Skills](https://github.com/thedivergentai/GD-Agentic-Skills) | 44 specialized Godot 4.7+ skills (RPG inventory, dialogue, combat, state machines, mobile, 2D/3D physics, shaders, etc.). |
-| **Ponytail** | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | Enforces senior engineer YAGNI principles: standard library first, zero over-engineering, avoids plugin madness. |
-| **Prompt Master** | [nidhinjs/prompt-master](https://github.com/nidhinjs/prompt-master) | Generates token-efficient, zero-reprompt prompts calibrated for frontier LLMs. |
-| **Graphify** | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | Parses AST relationships across scenes and GDScript into queryable knowledge graphs. |
-
----
-
-## 🎯 Intelligent Skill Curation Matrix
-
-When the harness bootstraps your game, it reads your folder slowly and curates from the 44 domain skills:
-
-*   **Universal Core (Kept for all games)**:
-    `godot-master`, `godot-gdscript-mastery`, `godot-project-foundations`, `godot-signal-architecture`, `godot-autoload-architecture`, `godot-scene-management`, `godot-resource-data-patterns`, `godot-ui-containers`, `godot-ui-theming`, `godot-testing-patterns`.
-*   **RPG / Narrative Games**:
-    Keeps `godot-inventory-system`, `godot-dialogue-system`, `godot-quest-system`, `godot-economy-system`, `godot-save-load-systems`.
-*   **2D Games**:
-    Keeps `godot-characterbody-2d`, `godot-2d-physics`, `godot-2d-animation`. Prunes 3D modules.
-*   **3D Games**:
-    Keeps 3D lighting, physics, and camera systems. Prunes 2D-only modules.
-*   **Action / Platformers**:
-    Keeps `godot-animation-tree-mastery`, `godot-camera-systems`, `godot-input-handling`, `godot-tweening`.
-*   **Multiplayer / Mobile**:
-    Kept strictly when networking (ENet, RPC) or touch/mobile configs exist; pruned otherwise to conserve context tokens.
-
----
-
-## 🛠️ The Headless QA CLI (`game.py`)
-
-The harness generates a single, zero-dependency Python CLI at your project root:
-
-```bash
-# 1. Inspect engine version, detected game genre, and test inventory
-python game.py info
-
-# 2. Capture an offscreen pixel-perfect PNG of ANY scene without opening a window
-python game.py capture --scene res://scenes/ui/Inventory.tscn
-python game.py capture --scene res://scenes/levels/Level1.tscn
-
-# 3. Run headless GDScript test suites in tests/
-python game.py test
-
-# 4. Audit project for ExtResource breaks and forbidden dynamic UI code
-python game.py validate
-```
-
-> **Why the isolated profile matters:**
-> `game.py` routes headless execution through an isolated `APPDATA` directory (`<project>_godot_qa_profile`). You can run test suites and visual captures in your terminal continuously **while Godot Editor stays open**, without engine lockups or crashes.
 
 ---
 
@@ -146,7 +170,8 @@ The generated `AGENTS.md` strictly binds agents to the **Scene-First** law:
 1. **Never write UI in code**: No `Button.new()`, `Label.new()`, or `Control.new()` for layouts.
 2. **Never override styles in code**: No `add_theme_stylebox_override()` or dynamic font size hacks in GDScript.
 3. **Visually Editable**: All components, cards, dialogues, and screens must exist in `.tscn` files so they can be inspected in the Godot 2D/3D Editor.
-4. **ScrollContainer Safety**: Children inside `ScrollContainer` must set `mouse_filter = 1 (Pass)` or `2 (Ignore)` so dragging is never swallowed.
+4. **Inspector-First `@export`**: Expose gameplay parameters via `@export` instead of private script constants.
+5. **ScrollContainer Safety**: Children inside `ScrollContainer` must set `mouse_filter = 1 (Pass)` or `2 (Ignore)` so dragging is never swallowed.
 
 ---
 

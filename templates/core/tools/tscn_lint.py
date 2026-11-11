@@ -32,8 +32,10 @@ SUB_RESOURCE = re.compile(r'\[sub_resource\s+type="([^"]+)"(?:\s+id="([^"]+)")?'
 EXT_USE = re.compile(r'ExtResource\("([^"]+)"\)')
 PACKED_BYTEARRAY = re.compile(r'PackedByteArray\("([^"]*)"\)')
 NODE_TAG = re.compile(r'^\[node\s+name="([^"]*)"')
-# Godot 4 resource format version. 3 is current; 4+ is rejected by the parser.
-MAX_GD_FORMAT = 3
+# Verified against Godot 4.7.2: format 3 and 4 both load, format 5 is
+# rejected with "Saved with newer format version." Godot never rejects a
+# LOWER format, so only an upper bound is meaningful.
+MAX_GD_FORMAT = 4
 
 
 class Issue:
@@ -60,14 +62,18 @@ def collect_targets(paths):
 
 
 def check_format(lines, path, issues):
-    """format=4 or higher makes the whole file unparseable."""
+    """A format newer than the engine is an unparseable scene.
+
+    Godot accepts older formats for backward compatibility, so only flag a
+    version ABOVE what this engine supports. Verified on 4.7.2: 4 loads, 5 does not.
+    """
     m = GD_SCENE_FORMAT.match(lines[0] if lines else "")
     if m:
         version = int(m.group(1))
         if version > MAX_GD_FORMAT:
             issues.append(Issue(path, 1, "bad-format",
-                                f"format={version} is not supported by this engine "
-                                f"(max {MAX_GD_FORMAT}); the entire scene fails to load"))
+                                f"format={version} is newer than this engine supports "
+                                f"(max {MAX_GD_FORMAT}); the scene fails to load"))
 
 
 def check_ext_resources(lines, path, issues):
