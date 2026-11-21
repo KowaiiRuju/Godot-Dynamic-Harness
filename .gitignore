@@ -25,6 +25,14 @@ venv/
 Thumbs.db
 desktop.ini
 
-# Agent caches
+# Agent caches & secrets
+.env
+.env.*
+*.key
+*.pem
+.agent-state/
+.context/
+.harness/
 graphify-out/
 .agents/skills/gd-agentic-skills/
+.agents/playbooks/

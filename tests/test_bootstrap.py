@@ -158,14 +158,75 @@ class Bootstrap(unittest.TestCase):
         self.assertIn("godot-master", review_md)
         self.assertIn("graphify", review_md)
 
-        # 4. Verify apply_plan deploys skills to .agents/skills/
+        # 4. Verify apply_plan deploys core skills to .agents/skills/ and reference playbooks to .agents/playbooks/
         out = self.apply(data, Path(response["artifacts"][1]))
         self.assertEqual(out["status"], "success")
         graphify_skill = self.root / ".agents/skills/graphify/SKILL.md"
         self.assertTrue(graphify_skill.is_file())
         self.assertIn("name: graphify", graphify_skill.read_text(encoding="utf-8"))
-        master_skill = self.root / ".agents/skills/godot-master/SKILL.md"
-        self.assertTrue(master_skill.is_file())
+        master_playbook = self.root / ".agents/playbooks/godot-master/SKILL.md"
+        self.assertTrue(master_playbook.is_file())
+
+    def test_gdh_v2_assets_installed_and_upgrade_flag_updates_modified_harness_files(self):
+        # 1. Verify GDH v2 files are installed on initial apply
+        data = bootstrap.make_plan(
+            self.root,
+            graphify="skip",
+            ide="both",
+            art_style="Dark Sci-Fi Vector UI",
+            caveman="always",
+            canva_mcp="enabled",
+        )
+        response = bootstrap.write_plan(data)
+        out = self.apply(data, Path(response["artifacts"][1]))
+        self.assertEqual(out["status"], "success")
+
+        # GEMINI.md, docs/.gdignore, .context/project_state.json
+        self.assertTrue((self.root / "GEMINI.md").is_file())
+        self.assertTrue((self.root / "docs/.gdignore").is_file())
+        state_file = self.root / ".context/project_state.json"
+        self.assertTrue(state_file.is_file())
+        state_data = json.loads(state_file.read_text(encoding="utf-8"))
+        self.assertEqual(state_data["art_style_direction"], "Dark Sci-Fi Vector UI")
+        self.assertEqual(len(state_data["ctx_hash"]), 8)
+
+        # Core tools: agent_lock.py and ui_pipeline/*
+        self.assertTrue((self.root / "core/tools/agent_lock.py").is_file())
+        for tool_name in ("bezel_profiler.py", "control_bounds_probe.gd", "mockup_dissect.py", "mockup_grade.py"):
+            self.assertTrue((self.root / "core/tools/ui_pipeline" / tool_name).is_file(), f"Missing {tool_name}")
+
+        # Focused rules in .agents/rules/
+        for rule_name in ("directory_boundaries.md", "graphify.md", "canva_image_gen.md"):
+            self.assertTrue((self.root / ".agents/rules" / rule_name).is_file(), f"Missing rule {rule_name}")
+
+        # 6 core workflow skills in .agents/skills/
+        for skill_name in (
+            "core-architecture",
+            "godot-test-qa",
+            "ui-mockup-pipeline",
+            "gdscript-migration",
+            "agent-coordination",
+            "token-budget",
+        ):
+            self.assertTrue((self.root / ".agents/skills" / skill_name / "SKILL.md").is_file(), f"Missing skill {skill_name}")
+        self.assertTrue((self.root / ".agents/skills/ui-mockup-pipeline/references/style_guide_template.md").is_file())
+
+        # 2. Simulate an outdated/modified harness file in an existing project and upgrade with upgrade=True
+        (self.root / "game.py").write_text("# Old GDH v1 game.py\n", encoding="utf-8")
+        (self.root / "core/tools/agent_lock.py").write_text("# Old agent_lock.py\n", encoding="utf-8")
+
+        # Without upgrade=True, modified game.py blocks with conflict
+        no_upgrade_plan = bootstrap.make_plan(self.root, graphify="skip", upgrade=False)
+        self.assertTrue(no_upgrade_plan["conflicts"])
+
+        # With upgrade=True, conflicts are resolved and harness files are cleanly updated
+        upgrade_plan = bootstrap.make_plan(self.root, graphify="skip", upgrade=True)
+        self.assertFalse(upgrade_plan["conflicts"], upgrade_plan["conflicts"])
+        upgrade_resp = bootstrap.write_plan(upgrade_plan)
+        upgrade_out = self.apply(upgrade_plan, Path(upgrade_resp["artifacts"][1]))
+        self.assertEqual(upgrade_out["status"], "success")
+        self.assertNotEqual((self.root / "game.py").read_text(encoding="utf-8"), "# Old GDH v1 game.py\n")
+        self.assertIn("mockup-dissect", (self.root / "game.py").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

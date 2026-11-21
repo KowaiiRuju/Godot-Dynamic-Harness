@@ -173,12 +173,12 @@ def grade_asset(image_path: Path, manifest_path: Path, scores: dict = None) -> d
             "tier3_functional_clarity": t3,
             "overall": overall
         },
-        "passed": overall >= 8.0,
+        "passed": overall >= 8.5,
         "notes": scores.get("notes", "Automated or reviewer rubric assessment")
     }
 
     manifest[str(image_path.as_posix())] = entry
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return entry
 
 

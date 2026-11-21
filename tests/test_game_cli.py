@@ -460,6 +460,100 @@ func _process(delta):
         self.assertTrue(tmp_file.is_file())  # --audit does not delete
         tmp_file.unlink()
 
+    def test_gdh_v2_compact_schema_v2_out_file_and_posix_paths(self):
+        out_file = self.root / ".agent-state/validate_out.json"
+        code, out = call(
+            "--project",
+            str(self.root),
+            "validate",
+            "--compact",
+            "--out",
+            str(out_file),
+        )
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["schema_version"], 2)
+        self.assertEqual(out["cmd"], "validate")
+        self.assertIn(out["status"], ("success", "skipped"))
+        self.assertEqual(len(out["ctx_hash"]), 8)
+        self.assertFalse(out["ctx_stale"])
+        self.assertEqual(out["active_skill"], ".agents/skills/godot-test-qa/SKILL.md")
+        self.assertIsNone(out["next_command"])
+        self.assertNotIn("context", out)
+
+        # Verify --out wrote UTF-8 JSON with POSIX forward slashes and no backslashes
+        self.assertTrue(out_file.is_file())
+        raw_text = out_file.read_text(encoding="utf-8")
+        self.assertNotIn("\\", raw_text)
+        disk_payload = json.loads(raw_text)
+        self.assertEqual(disk_payload["schema_version"], 2)
+        self.assertEqual(disk_payload["ctx_hash"], out["ctx_hash"])
+
+    def test_checkpoint_md_has_no_volatile_timestamps_and_is_byte_identical(self):
+        (self.root / "valid_node.gd").write_text("extends Node\nvar MinimapControl = Node\nfunc make():\n\treturn MinimapControl.new()\n", encoding="utf-8")
+        code1, out1 = call("--project", str(self.root), "validate", "--compact")
+        self.assertEqual(code1, 0, out1)
+        checkpoint_md = self.root / "docs/harness/CHECKPOINT.md"
+        self.assertTrue(checkpoint_md.is_file())
+        first_bytes = checkpoint_md.read_bytes()
+        first_text = checkpoint_md.read_text(encoding="utf-8")
+        self.assertNotIn("time_utc", first_text)
+
+        # Sleep briefly and run the exact same check again -> CHECKPOINT.md must be 100% byte-identical
+        time.sleep(0.05)
+        code2, out2 = call("--project", str(self.root), "validate", "--compact")
+        self.assertEqual(code2, 0, out2)
+        second_bytes = checkpoint_md.read_bytes()
+        self.assertEqual(first_bytes, second_bytes)
+
+    def test_plan_task_skill_activation_skip_graphify_and_user_art_style_gate(self):
+        # 1. Minor UI task with no configured art style -> ask_user_art_style=True, skip_graphify=True, ui-mockup-pipeline required
+        code, ui_plan = call(
+            "--project",
+            str(self.root),
+            "plan-task",
+            "Redesign HUD hotbar panel and mockup layout in Hud.tscn",
+            "--compact",
+        )
+        self.assertEqual(code, 0, ui_plan)
+        self.assertEqual(ui_plan["schema_version"], 2)
+        self.assertTrue(ui_plan["skip_graphify"])
+        self.assertTrue(ui_plan["ask_user_art_style"])
+        self.assertIn(".agents/skills/ui-mockup-pipeline/SKILL.md", ui_plan["required_skills"])
+        finding_codes = {f["code"] for f in ui_plan["findings"]}
+        self.assertIn("ART_STYLE_DIRECTION_UNSET", finding_codes)
+
+        # 2. Configure user art style in .context/project_state.json -> ask_user_art_style becomes False
+        ctx_dir = self.root / ".context"
+        ctx_dir.mkdir(parents=True, exist_ok=True)
+        (ctx_dir / "project_state.json").write_text(
+            json.dumps({"art_style_direction": "Hand-Painted Storybook Vector"}, sort_keys=True),
+            encoding="utf-8",
+        )
+        code, ui_plan_configured = call(
+            "--project",
+            str(self.root),
+            "plan-task",
+            "Redesign HUD hotbar panel and mockup layout in Hud.tscn",
+            "--compact",
+        )
+        self.assertEqual(code, 0, ui_plan_configured)
+        self.assertFalse(ui_plan_configured["ask_user_art_style"])
+        self.assertEqual(ui_plan_configured["art_style_check"]["art_style_direction"], "Hand-Painted Storybook Vector")
+
+        # 3. Major architectural task -> skip_graphify=False, core-architecture + godot-test-qa required
+        code, major_plan = call(
+            "--project",
+            str(self.root),
+            "plan-task",
+            "Overhaul multiplayer architecture and rewrite autoloads across systems",
+            "--compact",
+        )
+        self.assertEqual(code, 0, major_plan)
+        self.assertEqual(major_plan["change_class"], "Major")
+        self.assertFalse(major_plan["skip_graphify"])
+        self.assertIn(".agents/skills/core-architecture/SKILL.md", major_plan["required_skills"])
+        self.assertIn(".agents/skills/godot-test-qa/SKILL.md", major_plan["required_skills"])
+
 
 if __name__ == "__main__":
     unittest.main()

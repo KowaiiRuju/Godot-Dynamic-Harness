@@ -31,7 +31,17 @@ REPOSITORIES = {
     },
 }
 
+BUNDLED_WORKFLOW_SKILLS = [
+    "core-architecture",
+    "godot-test-qa",
+    "ui-mockup-pipeline",
+    "gdscript-migration",
+    "agent-coordination",
+    "token-budget",
+]
+
 CORE_SKILLS = [
+    *BUNDLED_WORKFLOW_SKILLS,
     "graphify",
     "ponytail",
     "prompt-master",
@@ -48,6 +58,12 @@ CORE_SKILLS = [
 ]
 
 SKILL_SPEC_MAP = {
+    "core-architecture": ("bundled", "core/skills/core-architecture"),
+    "godot-test-qa": ("bundled", "core/skills/godot-test-qa"),
+    "ui-mockup-pipeline": ("bundled", "core/skills/ui-mockup-pipeline"),
+    "gdscript-migration": ("bundled", "core/skills/gdscript-migration"),
+    "agent-coordination": ("bundled", "core/skills/agent-coordination"),
+    "token-budget": ("bundled", "core/skills/token-budget"),
     "graphify": ("graphify", "skill"),
     "ponytail": ("ponytail", "skills/ponytail"),
     "prompt-master": ("prompt_master", "."),
@@ -62,13 +78,15 @@ SKILL_SPEC_MAP = {
 def get_skill_spec(name: str):
     if name in SKILL_SPEC_MAP:
         repo_key, subpath = SKILL_SPEC_MAP[name]
-        repo_info = REPOSITORIES[repo_key]
+        repo_info = REPOSITORIES.get(repo_key, {})
         return {
             "name": name,
             "repo_key": repo_key,
             "repo_url": repo_info.get("url"),
             "package": repo_info.get("package"),
             "repo_subpath": subpath,
+            "tier": "skill",
+            "target_dir": ".agents/skills",
         }
     return {
         "name": name,
@@ -76,7 +94,42 @@ def get_skill_spec(name: str):
         "repo_url": REPOSITORIES["gd_agentic_skills"]["url"],
         "package": None,
         "repo_subpath": f"skills/{name}",
+        "tier": "playbook",
+        "target_dir": ".agents/playbooks",
     }
+
+
+def is_playbook_skill(spec_or_name) -> bool:
+    """Return True if the skill belongs to the external gd_agentic_skills reference playbook tier."""
+    if isinstance(spec_or_name, dict):
+        return spec_or_name.get("repo_key") == "gd_agentic_skills" or spec_or_name.get("tier") == "playbook"
+    spec = get_skill_spec(str(spec_or_name))
+    return spec.get("repo_key") == "gd_agentic_skills"
+
+
+def resolve_skill_target_dir(
+    root: Path,
+    spec_or_name,
+    skills_dir: str = ".agents/skills",
+    playbooks_dir: str = ".agents/playbooks",
+) -> Path:
+    """Resolve installation directory (.agents/skills/<name> vs .agents/playbooks/<name>)."""
+    name = spec_or_name["name"] if isinstance(spec_or_name, dict) else str(spec_or_name)
+    if playbooks_dir and is_playbook_skill(spec_or_name):
+        return Path(root) / playbooks_dir / name
+    return Path(root) / skills_dir / name
+
+
+def split_skills_and_playbooks(skills_list: list) -> dict:
+    """Partition curated skill specs into core workflow skills and external reference playbooks."""
+    core_skills = []
+    playbooks = []
+    for item in skills_list:
+        if is_playbook_skill(item):
+            playbooks.append(item)
+        else:
+            core_skills.append(item)
+    return {"skills": core_skills, "playbooks": playbooks}
 
 
 def detect_project_traits(root: Path, context: dict = None) -> dict:
@@ -187,7 +240,14 @@ def detect_project_traits(root: Path, context: dict = None) -> dict:
     return traits
 
 
-def curate_skills(root: Path, context: dict = None, mode: str = "curated", caveman_mode: str = "conditional") -> list:
+def curate_skills(
+    root: Path,
+    context: dict = None,
+    mode: str = "curated",
+    caveman_mode: str = "conditional",
+    skills_dir: str = ".agents/skills",
+    playbooks_dir: str = ".agents/playbooks",
+) -> list:
     if mode == "none":
         return []
 
@@ -197,6 +257,9 @@ def curate_skills(root: Path, context: dict = None, mode: str = "curated", cavem
         if name not in selected:
             spec = get_skill_spec(name)
             spec["rationale"] = rationale
+            spec["target_dir"] = (
+                playbooks_dir if (playbooks_dir and is_playbook_skill(spec)) else skills_dir
+            )
             selected[name] = spec
 
     for name in CORE_SKILLS:
@@ -211,7 +274,26 @@ def curate_skills(root: Path, context: dict = None, mode: str = "curated", cavem
     if mode == "core":
         return sorted(selected.values(), key=lambda s: s["name"])
 
-    traits = detect_project_traits(root, context)
+    if mode == "all":
+        traits = {
+            "is_2d": True,
+            "is_3d": True,
+            "is_mobile": True,
+            "has_dialogue": True,
+            "has_inventory": True,
+            "has_quests": True,
+            "has_save": True,
+            "has_combat": True,
+            "has_multiplayer": True,
+            "has_shaders": True,
+            "has_particles": True,
+            "has_audio": True,
+            "has_navigation": True,
+            "has_state_machine": True,
+            "has_procedural": True,
+        }
+    else:
+        traits = detect_project_traits(root, context)
 
     if traits["is_2d"]:
         add_skill("godot-characterbody-2d", "2D character physics and movement detected")
@@ -259,7 +341,10 @@ def curate_skills(root: Path, context: dict = None, mode: str = "curated", cavem
         add_skill("godot-audio-architecture", "AudioStreamPlayer or audio buses detected")
 
     if traits["has_navigation"]:
-        add_skill("godot-navigation-2d" if traits["is_2d"] else "godot-navigation-3d", "Navigation and pathfinding detected")
+        if traits["is_2d"]:
+            add_skill("godot-navigation-2d", "Navigation and pathfinding detected")
+        if traits["is_3d"]:
+            add_skill("godot-navigation-3d", "Navigation and pathfinding detected")
 
     if traits["has_state_machine"]:
         add_skill("godot-state-machines", "Finite state machine patterns detected")

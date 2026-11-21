@@ -1,77 +1,35 @@
 ---
 name: cavecrew
-description: >
-  When to delegate to `cavecrew-investigator` (locate code), `cavecrew-builder`
-  (1-2 file edit) or `cavecrew-reviewer` (diff review) instead of working inline
-  or using `Explore`. Their output is compressed, so main context lasts longer.
+description: >-
+  Route suitable work to bounded agents using Dual-Workhorse orchestration
+  (Gemini 4 Hydrogen / Pro lead + Gemini 3.8 Flash workers) and game.py lock
+  (agent_lock.py) SHA-256 write-off handoff contracts. See references/multi-agent-handoff.md.
 ---
 
-Cavecrew = three subagent presets that emit caveman output. Same job as Anthropic defaults (`Explore`, edit-style agents, reviewer); difference is the tool-result they return is compressed, so main context shrinks per delegation.
+# Lead & Dual-Workhorse Workflow (GDH v2)
 
-## When to use cavecrew vs alternatives
+Follow the repository's [canonical delegation and verification policy](../../../AGENTS.md). This skill defines portable multi-agent handoffs, Dual-Workhorse routing, and `python game.py lock` (`core/tools/agent_lock.py`) concurrency contracts.
 
-| Task | Use |
-|---|---|
-| "Where is X defined / what calls Y / list uses of Z" | `cavecrew-investigator` |
-| Same but you also want suggestions/architecture commentary | `Explore` (vanilla) |
-| Surgical edit, ≤2 files, scope obvious | `cavecrew-builder` |
-| New feature / 3+ files / cross-cutting refactor | Main thread or `feature-dev:code-architect` |
-| Review diff, branch, or file for bugs | `cavecrew-reviewer` |
-| Deep code review with rationale + alternatives | `Code Reviewer` (vanilla) |
-| One-line answer you already know | Main thread, no subagent |
+## 1. Keep Decisions with the Lead
+The Lead agent (Gemini 4 Hydrogen / Pro) owns task interpretation (`python game.py plan-task`), architecture, user art/UI style direction checks, risk, verification scope, shared contracts (`project.godot`, autoloads, `game.py`), integration, and final review. Delegate bounded research or implementation slices with clear acceptance commands. Keep trivial single-file work inline.
 
-Rule of thumb: **if you'd want the subagent's output in 1/3 the tokens, pick cavecrew. If you'd want prose, pick vanilla.**
+## 2. Dual-Workhorse Routing Table
 
-## Why this exists (the real win)
+| Role | Assignment | Model & Thinking Recommendation | Required Evidence |
+| --- | --- | --- | --- |
+| Investigator | Read-only definitions, callers, dependencies, or failure evidence | Gemini 3.8 Flash (High) (`38flsh-high`) | `path:line`, observations, unresolved questions |
+| Builder (Routine / UI) | Bounded 1-2 file slice, `.tscn` StyleBox tuning, or visual/doc edit | Gemini 3.8 Flash (Med/High) (`38flsh-med`/`38flsh-high`) | Changed paths, proportionate check output, SHA-256 `write-off` |
+| Builder (Deep Logic) | Multi-file refactoring, autoloads, networking, save/migration, FSMs | Gemini 4 Hydrogen / Pro (Med/High) (`4hyd-med`/`4hyd-high`) | Architecture diff, state invariants, suite results, SHA-256 `write-off` |
+| Reviewer / Verifier | Read-only verification of diff, `mockup-grade`, and test evidence | Gemini 4 Hydrogen / Pro (High/XHigh) (`4hyd-high`/`4hyd-xtra`) | Findings with `path:line`, severity, test/grade output |
 
-Subagent tool results get injected into main context verbatim. A vanilla `Explore` that returns 2k tokens of prose costs 2k tokens of main-context budget every time. The same finding from `cavecrew-investigator` returns ~700 tokens. Across 20 delegations in one session that's the difference between context exhaustion and finishing the task.
+### Tool & Concurrency Configuration
+- **`invoke_subagent`**: Use `Model: "flash"` for Discovery Scouts and Routine Builders; `Model: "inherit"` or `"pro"` for Deep Logic Builders and Reviewers. Role format: `<model>-<Think> <Worker>` (e.g., `3.8-flsh-Med UI Builder`, `4-hyd-High Arch Review`).
+- **`swarm`**: Worker slug format `<model_slug>-<think>-<role>` (e.g., `38flsh-med-ui`, `4hyd-med-core`).
+- **Single-Worker Lock Bypass & Multi-Agent Leases (`python game.py lock`)**:
+  - Skip `game.py lock` when working as a single writer (`multi_agent == false`).
+  - When `>= 2` concurrent write workers run, each worker MUST acquire leases before editing (`python game.py lock acquire <files...> --agent <slug> --task <task_id> --json --compact`) and conclude with SHA-256 journaling (`python game.py lock write-off <files...> --agent <slug> --task <task_id> --summary "..." --json --compact`).
 
-## Output contracts
-
-What main thread can rely on per agent:
-
-**`cavecrew-investigator`**
-```
-<Header>:
-- path:line — `symbol` — short note
-totals: <counts>.
-```
-Or `No match.` Always file-path-first, line-number-attached, backticked symbols. Safe to grep with `path:\d+`.
-
-**`cavecrew-builder`**
-```
-<path:line-range> — <change ≤10 words>.
-verified: <re-read OK | mismatch @ path:line>.
-```
-Or one of: `too-big.` / `needs-confirm.` / `ambiguous.` / `regressed.` (terminal first token).
-
-**`cavecrew-reviewer`**
-```
-path:line: <emoji> <severity>: <problem>. <fix>.
-totals: N🔴 N🟡 N🔵 N❓
-```
-Or `No issues.` Findings sorted file → line ascending.
-
-## Chaining patterns
-
-**Locate → fix → verify** (most common):
-1. `cavecrew-investigator` returns site list.
-2. Main thread picks 1-2 sites, hands paths to `cavecrew-builder`.
-3. `cavecrew-reviewer` audits the diff.
-
-**Parallel scout** (when investigation is broad):
-Spawn 2-3 `cavecrew-investigator` calls in one message (different angles: defs vs callers vs tests). Aggregate in main thread.
-
-**Single-shot edit** (when site is already known):
-Skip investigator. Hand exact path:line to `cavecrew-builder` directly.
-
-## What NOT to do
-
-- Don't use `cavecrew-builder` when you don't already know the file. Spawn investigator first or main thread will eat tokens passing context.
-- Don't chain `cavecrew-investigator → cavecrew-builder` for a 5-file refactor. Builder will return `too-big.` and you'll have wasted a turn.
-- Don't ask `cavecrew-reviewer` for "general feedback" — it returns findings only, no architecture opinions. Use `Code Reviewer` for that.
-- Don't expect prose. Cavecrew output is structured, sometimes terse to the point of cryptic. If a human will read it directly, paraphrase.
-
-## Auto-clarity (inherited)
-
-Subagents drop caveman → normal English for security warnings, irreversible-action confirmations, and any output where fragment ambiguity could be misread. Resume caveman after.
+## 3. Bounded Ownership, Progress & Acceptance
+- Use [references/multi-agent-handoff.md](references/multi-agent-handoff.md) and [references/progress-reporting.md](references/progress-reporting.md) when dispatching workers.
+- Give each writer a strictly disjoint writable path set; read-only context paths may overlap.
+- Return compact, file-first Caveman reports (`Changed paths`, `Findings`, `Verification`, `Artifacts`, `Next action`). Auto-switch to clear prose for safety warnings or irreversible actions.

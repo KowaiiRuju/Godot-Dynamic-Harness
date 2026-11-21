@@ -1,52 +1,66 @@
-GODOT DYNAMIC HARNESS: REVIEW-FIRST PROJECT SETUP
+GODOT DYNAMIC HARNESS (GDH v2): REVIEW-FIRST PROJECT SETUP & TOKEN-CAPPED WORKFLOW
 
-Use this harness to equip my Godot project and IDE agent with the right tools and persistent context. Target Antigravity first; VS Code second.
+Use this harness to equip my Godot 4 project and IDE agent with GDH v2 tools, prefix-cache-stable persistent context, mandatory skill activation gates, and the connected 5-stage UI mockup pipeline. Target Antigravity first; VS Code second.
 
-1. Inspect existing project settings, instructions, tools and test inventory. Preserve current architecture and user customizations. Use existing Graphify queries before codebase investigations when a graph exists; verify relevant findings against source. Never claim an unsupported/missing graph ran.
+1. Inspect existing project settings, instructions, tools, and test inventory. Preserve current architecture and user customizations. Only run Graphify queries for Major architectural investigations when `graphify-out/graph.json` exists (`skip_graphify: true` on minor tasks); verify relevant findings against source. Never claim an unsupported/missing graph ran.
 
 2. Run the harness checkout's planning command:
-   python bootstrap.py plan --project "<game root>" --ide antigravity --skills curated --caveman conditional --canva-mcp optional
-   Choose vscode/both if requested. Select the actual --godot executable when discovery is ambiguous.
-   If Graphify is missing, propose --graphify install; do not install it yet.
-   Propose --smoke only when a generic main-scene test fits the observed startup flow.
-   Propose --png-grid for PNG comparison sheets if Pillow is missing; HTML galleries need no extra package.
-   The harness automatically curates and plans skills into .agents/skills/ (Graphify, Ponytail, Prompt-Master, Caveman, and Godot domain skills) tailored to the project's dimension and mechanics without blowing the agent context budget.
-   Dependency installation belongs in the reviewed plan. Game-specific helpers/tests require an observed need and a reviewed proposal.
+   python bootstrap.py plan --project "<game root>" --ide antigravity --skills curated --caveman conditional --canva-mcp optional [--upgrade] [--art-style "<user style direction>"]
+   - Use `--upgrade` when updating an existing harness installation in place (`game.py`, `core/tools/**`, `.agents/rules/**`, `.agents/skills/**`, `AGENTS.md`, `GEMINI.md`).
+   - Use `--art-style "<style>"` if the user has already chosen an art/UI style direction; otherwise leave it empty so the harness prompts the user before generating mockups or assets.
+   - Choose `vscode` or `both` if requested. Select `--godot` explicitly when engine discovery is ambiguous.
+   - If Graphify is missing, propose `--graphify install`; do not install it before approval.
+   - Propose `--smoke` only when a generic main-scene test fits the observed startup flow.
+   - Propose `--png-grid` for PNG comparison sheets if Pillow is missing; HTML galleries work without Pillow.
+   - The harness installs core workflow skills into `.agents/skills/` (`ui-mockup-pipeline`, `core-architecture`, `godot-test-qa`, `gdscript-migration`, `agent-coordination`, `token-budget`, `graphify`, `cavecrew`, `caveman`) and routes external `gd_agentic_skills` domain playbooks into `.agents/playbooks/` to prevent system-prompt bloat.
 
-3. Present the generated Markdown plan to the user. Explain project findings, exact file/dependency actions, preserved files, conflicts, optional tests and verification limits. Ask what to adjust. DO NOT invoke apply or install tools until the user explicitly approves the exact plan. Regenerate after changing options or resolving conflicts.
+3. Present the generated Markdown plan to the user. Explain project findings, exact file/dependency actions, preserved files, conflicts, optional tests, and verification limits. Ask what to adjust. DO NOT invoke `apply` or install tools until the user explicitly approves the exact plan. Regenerate after changing options or resolving conflicts.
 
-4. After approval, run the exact apply command/digest printed in that plan. Inspect returned status, findings and post-apply checks. A digest identifies the plan; it cannot prove user approval. Record failures and incomplete checks rather than declaring the workspace ready.
+4. After approval, run the exact `apply` command and digest printed in that plan:
+   python bootstrap.py apply --plan "<JSON plan path>" --approve <approval digest>
+   Inspect returned status, findings, and post-apply checks. A digest identifies the plan; it cannot prove user approval. Record failures and incomplete checks rather than declaring the workspace ready.
 
-5. Keep concise persistent files in the project:
-   AGENTS.md and selected IDE instructions
-   docs/harness/PROJECT.md, TOOLS.md, CHECKPOINT.md
-   graphify-out/graph.json and .harness freshness/setup state
-   Preserve user text outside managed blocks. Do not store secrets or copy entire chat logs. Enforce strict budget cap: CHECKPOINT.md remains under 2 KB.
+5. Keep concise, deterministic, prefix-cache-stable files in the project:
+   - `AGENTS.md`, `GEMINI.md`, and `.agents/rules/{directory_boundaries,graphify,canva_image_gen,godot-harness}.md`
+   - `.context/project_state.json` (hash-gated `ctx_hash` project state cache with `art_style_direction`)
+   - `docs/harness/PROJECT.md`, `TOOLS.md`, `CHECKPOINT.md` (zero volatile timestamps in `CHECKPOINT.md`; < 2 KB cap; `docs/.gdignore` shielding)
+   - `graphify-out/graph.json` and `.harness/` freshness/setup state
+   Preserve user text outside managed blocks. Never store secrets or copy entire chat logs.
 
-6. In each fresh session, read the concise project/tool/checkpoint documents and run:
-   python game.py info --json
+6. Zero-Bloat Startup & Hash-Gated Context:
+   - NEVER run `python game.py info --json` on startup.
+   - Always pass `--json --compact --out <filepath>` to `python game.py` (never PowerShell `>` or `Out-File`, which emit UTF-16LE).
+   - `--compact` emits `schema_version: 2` ultra-compact payloads (`ctx_hash`, `ctx_stale`, `active_skill`, `summary`, `findings`, `next_command`) and omits the 250-token `context` block whenever `ctx_stale == false`. Read `.context/project_state.json` ONLY when `"ctx_stale": true`.
 
-7. Before planning multi-step work or editing:
-   python game.py plan-task "<task description>" --json
-   Follow the deterministic change tier (Minor/Major), Caveman mode (full for code/debug, off for prose/plans), and checklist.
-   For target scenes, inspect compact structure without raw byte bloat:
-   python game.py scene-outline res://scenes/Target.tscn --json
-   Before codebase investigations:
-   python game.py graph --json
-   python game.py graph --refresh --timeout 120 --json    (if missing/stale/untracked)
-   python game.py graph --query "<specific file/symbol/question>" --json
-   Narrow queries instead of dumping full reports. If Graphify fails, report the reason and obtain/record approval for a source-only fallback. Graph results are navigation hints; source and engine behavior are the evidence.
+7. Mandatory Skill Activation Gate & Task Triage:
+   Before editing any `.tscn`, `.gd`, or asset file, run:
+   python game.py plan-task "<task description>" --json --compact --out .agent-state/plan_task.json
+   OR read the governing skill in `.agents/skills/<skill>/SKILL.md` (`required_skills`):
+   - UI / HUD / Modals / Mockups / Assets -> `.agents/skills/ui-mockup-pipeline/SKILL.md`
+   - Architecture / Autoloads / Scene Wiring -> `.agents/skills/core-architecture/SKILL.md`
+   - GDScript 4.x / Signals / Static Typing -> `.agents/skills/gdscript-migration/SKILL.md`
+   - Testing / Captures / Baselines / QA -> `.agents/skills/godot-test-qa/SKILL.md`
+   - Multi-Agent Swarm / File Leases (`lock`) -> `.agents/skills/agent-coordination/SKILL.md`
+   - Context Boundaries / Bounded Line Reads -> `.agents/skills/token-budget/SKILL.md`
+   Inspect `.tscn` structure cheaply before reading raw scene lines:
+   python game.py scene-outline res://scenes/Target.tscn --json --compact
+   Run Graphify (`python game.py graph --refresh / --query`) ONLY when `triage_category == "major"` (`skip_graphify == false`).
 
-8. For development, inspect relevant .tscn before attached GDScript. Keep layout/themes/reusable UI components editable in scenes; scripts bind data, connect signals and implement behavior. Keep all scene elements, nodes, and attributes inspector-editable: expose gameplay tuning parameters, speeds, timers, thresholds, ranges, vitals, capacities, offsets, and scene references via @export (@export_group, @export_range, @export_enum) rather than hiding them in private script constants. For 2D top-down entities, align local origins (0, 0) to ground contact points, enable y_sort_enabled on parent sorting containers, and expose visual sprite offsets or y_sort_origin in the Inspector. Prefer typed GDScript, composition and the existing game's patterns. Do not impose a generic architecture or blanket ScrollContainer mouse-filter rule.
+8. User-Chosen Art & UI Style Direction + 5-Stage Connected UI Mockup Pipeline:
+   Never assume or hardcode Cozy HD or any fixed art style. For any UI, HUD, modal, or visual asset work:
+   - Stage 0 (Prerequisites & User Art Style Gate): Check `art_style_direction` in `.context/project_state.json` or `docs/art/style_guide.md`. If unset (`ask_user_art_style: true`), explicitly ask the user to decide and define their art & UI style direction first. Generate/export mockups and assets via Canva MCP (`generate-image`, `remove-background`, `create-design`, `export-design`), then verify prerequisites via `python game.py mockup-dissect --check-prereqs --json --compact` and `python game.py assets --audit --json --compact`.
+   - Stage 1 (Dissect & Profile): `python game.py mockup-dissect --scene <scene.tscn> --mockup <mockup.png> --json --compact --out artifacts/ui_pipeline/dissect.json` -> writes `artifacts/ui_pipeline/dissection_manifest.json` & `manifest.json`.
+   - Stage 2 (Scene-First `.tscn` Authoring): Edit `StyleBoxTexture` / `StyleBoxFlat` margins, `content_margin_*`, and containers in `.tscn` (never `Control.new()` in GDScript) -> verify via `python game.py validate --uid --json --compact`.
+   - Stage 3 (Deterministic Grading): `python game.py mockup-grade --manifest artifacts/ui_pipeline/dissection_manifest.json --json --compact --out artifacts/ui_pipeline/grade.json` -> fix all `failed_components` until `passed: true`.
+   - Stage 4 (Visual Capture & Baseline Diff): `python game.py capture --scene <scene.tscn> --json --compact --out .agent-state/capture.json` and `python game.py baseline --check --scene <scene.tscn> --json --compact`.
 
-9. Use info's real command/argument inventory and follow tiered testing strategies (see docs/TESTING_GUIDE.md):
-   - Smoke Testing: Run python game.py test --tier smoke --json (or capture --json) after setup or engine switches to ensure the engine boots and autoloads run. Stop if it fails.
-   - Sanity Testing: Run focused suite/scene tests (python game.py test --suite <path> --json, python game.py test --changed --json, or capture --scene <path> --json) immediately after surgical edits to verify targeted behavior.
-   - Visual Baseline Testing: Run python game.py baseline --check --json to verify Control hierarchies and layout rects without GPU overhead.
-   - Asset & Logic Auditing: Run python game.py audit --physics --exports --signals --perf --json to verify collision layers, signals, and frame budgets. Run python game.py assets --audit --json to detect sprite halos and padding. Run python game.py saves --json to inspect user saves.
-   - Regression Testing: Run full test sweeps (python game.py test --json), batch captures (capture --all-scenes --json), engine checks (validate --engine --orphans --uid --json), and syntax scans (syntax --scan . --json) before finishing tasks or committing. Review labeled gallery/contact sheets and manifests; batch failures stay visible.
-   Capture preserves the project renderer by default and requires graphics; engine execution is not sandboxed by save-profile isolation. Ephemeral debug captures automatically retain the 5 most recent runs; use python game.py clean --audit --json to inspect hygiene and clean --captures --json (or clean --all --json) to purge captures and QA review galleries before committing.
+9. Scene-First, Inspector-First & Multi-Agent Concurrency (`game.py lock`):
+   - Keep all UI layouts, Themes, and StyleBoxes in `.tscn`/`.tres`; expose gameplay numbers via `@export` (`@export_group`, `@export_range`, `@export_enum`); align 2D top-down origins `(0, 0)` to ground contact and set `y_sort_enabled = true`.
+   - Single-Worker Lock Bypass: Skip `python game.py lock` when working alone (`multi_agent == false`). When `>= 2` concurrent write workers run in `swarm`, acquire advisory leases (`python game.py lock acquire <files...> --agent <slug> --task <task> --json --compact`) and conclude edits with SHA-256 journaling (`python game.py lock write-off <files...> --agent <slug> --task <task> --summary "..." --json --compact`).
 
-10. After source/config changes, refresh graph and project context. Keep concise decisions, next steps and unverified assumptions outside the checkpoint's managed block. Static scans, engine parsing/loading, screenshots, gameplay and device/release acceptance are separate gates.
-
-Do not unreviewed bulk-install or destructively delete skill libraries, automatically upgrade Godot, generate comprehensive gameplay suites, or add MCP/live-editor infrastructure without a separately reviewed need. Never claim agent compliance or token savings based only on generated Markdown files.
+10. Proportionate Testing & Repository Hygiene:
+    - Minor doc: reread diff, no Godot startup, no Graphify.
+    - Minor visual: `capture --scene <path> --json --compact` + `baseline --check --json --compact`.
+    - Minor logic: `syntax --scan <files> --json --compact` + `test --suite <path> --json --compact` (passing logic tests emit `next_command: null`; do not auto-chain `capture`).
+    - Major: `test --json --compact`, `validate --engine --orphans --uid --json --compact`, `syntax --scan . --json --compact`, and `graph --refresh --timeout 120 --json --compact`.
+    - Hygiene: Run `python game.py clean --audit --json --compact` to detect orphan `.uid`/`.import` files, `.gdignore` violations, and expired leases, and `python game.py clean --captures --json --compact` before commits.

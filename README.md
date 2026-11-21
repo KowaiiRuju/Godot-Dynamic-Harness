@@ -1,15 +1,23 @@
-# Godot Dynamic Harness
+# Godot Dynamic Harness (GDH v2)
 
-A review-first toolkit that equips Godot developers and their IDE agents with project-aware Python tools and persistent project context. Antigravity is the first integration; VS Code is the second.
+A review-first, token-debloated toolkit that equips Godot 4 developers and their IDE agents (Antigravity and VS Code) with project-aware Python tools, hash-gated `.context/project_state.json` caching, mandatory skill activation gates, multi-agent advisory locking (`game.py lock`), and a style-agnostic 5-stage UI mockup pipeline.
 
-The core CLI uses the Python standard library. It resolves the selected Godot executable/version and project, exposes command capabilities as JSON, checks scenes/scripts, runs tests, renders captures, and maintains a source graph and Markdown guidance.
+The core CLI (`game.py`) uses the Python standard library. It resolves the selected Godot 4 executable/version and project, emits `schema_version: 2` ultra-compact JSON outputs (`--json --compact --out <file>`), checks scenes/scripts, runs proportionate tests, dissects and grades UI mockups against `.tscn` control bounds, renders captures, and maintains a Major-only Graphify knowledge graph.
 
-## Start with a plan
+---
+
+## Start with a Reviewed Plan (or `--upgrade`)
 
 Clone this repository, then inspect your game without installing anything or starting its scenes/autoloads:
 
 ~~~powershell
-python bootstrap.py plan --project "C:\Games\MyGame" --ide antigravity
+python bootstrap.py plan --project "C:\Games\MyGame" --ide antigravity --skills curated --caveman conditional --canva-mcp optional
+~~~
+
+To upgrade an existing harness installation in place (`game.py`, `core/tools/**`, `.agents/rules/**`, `.agents/skills/**`, `AGENTS.md`, `GEMINI.md`) or seed an explicit art & UI style direction:
+
+~~~powershell
+python bootstrap.py plan --project "C:\Games\MyGame" --ide antigravity --upgrade --art-style "Flat 2D Vector UI + 16x16 Top-Down Pixel Art"
 ~~~
 
 Or use the PowerShell wrapper:
@@ -18,177 +26,135 @@ Or use the PowerShell wrapper:
 .\setup.ps1 -Project "C:\Games\MyGame" -IDE antigravity
 ~~~
 
-The result points to a Markdown plan containing exact file diffs, dependency actions, verification actions and conflicts, plus its matching JSON plan. Review it with your agent and adjust the options to your game. Planning writes only review artifacts.
+### Planning Flags
+- `--ide antigravity|vscode|both`: Selects persistent IDE instructions.
+- `--upgrade`: Allows `bootstrap.py` to update existing harness-managed files (`game.py`, `core/tools/**`, `.agents/rules/**`, `.agents/skills/**`) in place instead of halting on content conflicts.
+- `--art-style "<description>"`: Persists the user's chosen art & UI style direction in `.context/project_state.json`. If left unset (`""`), `game.py plan-task` and `game.py mockup-dissect` prompt the agent to ask the user for their art & UI style direction before generating mockups or assets.
+- `--skills curated|core|all|none`: Installs core workflow skills into `.agents/skills/` and routes external `gd_agentic_skills` reference playbooks into `.agents/playbooks/` so IDE system prompts stay lean and prefix-cache-stable.
+- `--caveman conditional|always|off`: Configures token-efficient Caveman communication (`conditional` uses Caveman for code/QA and normal prose for plans/docs/lore).
+- `--canva-mcp optional|enabled|disabled`: Configures Canva MCP integration for UI mockups and visual assets.
+- `--graphify existing|install|skip`: Configures the persistent Godot + Graphify source graph.
+- `--smoke`: Proposes an optional `tests/test_harness_smoke.gd` main-scene smoke test.
+- `--png-grid`: Proposes optional Pillow installation in `.harness/venv` for PNG contact sheets and 1D scanline bezel profiling.
+- `--godot <path>` & `--timeout <seconds>`: Selects a specific Godot 4 binary and subprocess timeout.
 
-- --ide antigravity, vscode, or both selects persistent IDE instructions.
-- --godot selects an executable; otherwise existing GODOT4_BIN/GODOT_BIN, PATH, then an unambiguous Desktop executable are checked.
-- --graphify existing uses the installed tool. If missing, regenerate with --graphify install to propose installation into the project's .harness/venv. Nothing is installed before approval.
-- --graphify skip is an explicit opt-out; it does not satisfy the normal graph-navigation workflow.
-- --smoke proposes a reusable main-scene smoke test and its execution after approval. Omit it when your game's initialization needs a tailored test.
-- --png-grid proposes Pillow for PNG comparison sheets when it is unavailable. Installation uses only the project's .harness/venv; the wrapper option is -PNGGrid. HTML galleries work without Pillow.
-- --skills curated, core, all, or none curates and deploys agent skills to .agents/skills/ (Graphify, Ponytail, Prompt-Master, and Godot domain skills) tailored to project dimension and mechanics. The CLI default is curated.
-- --timeout sets the subprocess deadline.
-
-After the user has explicitly approved that exact plan, run the apply command printed at its end:
+After reviewing and approving the generated plan in `tasks/godot-harness-setup-<id>.md`, apply it with its exact digest:
 
 ~~~powershell
 python bootstrap.py apply --plan "<JSON plan path>" --approve <approval digest>
 ~~~
 
-The digest identifies the reviewed content; it cannot prove a human reviewed it. The agent must obtain approval in conversation first. Altered plans, changed source/project inputs, and conflicting custom tools require a new plan. Existing Markdown guidance is preserved around managed blocks. Custom game.py/core helpers are never silently replaced; conflicts need manual adoption/merging.
+---
 
-The approved setup installs selected files, refreshes project context, builds the source graph when selected, and runs only the selected smoke test. Dependency failures stop before toolkit writes. Verification failures remain visible even when files were installed. Re-running a plan does not repeat installations.
-
-## What gets installed
+## What Gets Installed (GDH v2)
 
 | Path | Purpose |
 | --- | --- |
-| game.py | Discoverable CLI with text/JSON results |
-| core/tools/ | Configuration probe, engine/resource checker, capture runner, migration notes and Godot graph adapter |
-| AGENTS.md | Concise Godot development and review-first workflow |
-| .agents/rules/godot-harness.md | Antigravity always-on workspace rule |
-| .github/copilot-instructions.md | VS Code repository instructions, when selected |
-| docs/harness/PROJECT.md | Engine, scene, viewport, renderer and autoload facts; room for project decisions |
-| docs/harness/TOOLS.md | Actual commands, limits and evidence requirements |
-| docs/harness/CHECKPOINT.md | Last tool outcome; room for session handoff notes |
-| graphify-out/graph.json | Persistent local source graph |
-| .harness/ | Plan approvals, freshness state, optional dependency environment and setup/check outcomes |
-| tests/test_harness_smoke.gd | Optional main-scene smoke test |
-| .agents/skills/ | Curated workspace agent skills with valid SKILL.md definitions |
+| `game.py` | Unified CLI with `schema_version: 2` `--json --compact --out <file>` support |
+| `core/tools/` | Engine/resource probes, capture runner, asset inspector (`>= 8.5` rubric), migration database, Godot graph adapter, and `agent_lock.py` |
+| `core/tools/ui_pipeline/` | Style-agnostic 5-stage UI pipeline tools (`bezel_profiler.py`, `control_bounds_probe.gd`, `mockup_dissect.py`, `mockup_grade.py`) |
+| `AGENTS.md` & `GEMINI.md` | High-signal, prefix-cache-stable GDH v2 specification with Mandatory Skill Activation Table |
+| `.context/project_state.json` | Hash-gated (`ctx_hash`) project metadata and `art_style_direction` cache (`sort_keys=True`) |
+| `.agents/rules/` | Focused workspace rules: `directory_boundaries.md`, `graphify.md`, `canva_image_gen.md`, and `godot-harness.md` |
+| `.agents/skills/` | Core actionable workflow skills (`ui-mockup-pipeline`, `core-architecture`, `godot-test-qa`, `gdscript-migration`, `agent-coordination`, `token-budget`, `graphify`, `cavecrew`, `caveman`) |
+| `.agents/playbooks/` | External Godot 4 reference playbooks (`gd_agentic_skills`), separated from `.agents/skills/` to prevent every-turn prompt bloat |
+| `docs/harness/` | Deterministic `PROJECT.md`, `TOOLS.md`, and timestamp-free `CHECKPOINT.md` (< 2 KB) |
+| `docs/.gdignore` | Shields documentation and reference mockups from Godot resource importing |
+| `graphify-out/graph.json` | Persistent local Godot + Python/C# source graph (queried/rebuilt on `Major` tasks only) |
+| `.harness/` | Plan approvals, freshness state, asset manifest, layout baselines, and setup state |
 
-Setup adds local graph/profile/venv/capture exclusions to .gitignore. Project guidance can be committed; generated graph/state stays local and survives IDE restarts.
+---
 
-## Fresh agent session
+## GDH v2 Architecture Highlights
 
-1. Read PROJECT.md, TOOLS.md, CHECKPOINT.md and the project's existing instructions.
-2. Run python game.py info --json for actual engine/project/tool availability.
-3. Before a codebase investigation, inspect graph status, refresh if needed, and make a scoped query.
-4. Read the relevant source/scene to verify graph findings; make the requested change.
-5. Run the relevant checks/capture, inspect returned findings/artifacts, refresh graph/context, and leave concise handoff notes outside managed blocks.
+### 1. Zero-Bloat Startup & `schema_version: 2` Compact Caching
+- **Never run `python game.py info --json` on startup**: Commands compute an 8-character `ctx_hash` from `project.godot` (`st_mtime_ns:st_size:engine_version`) cached in `.context/project_state.json`.
+- **Ultra-Compact Outputs (`--compact`)**: When `--compact` is passed (without `--full`), `game.py` emits `schema_version: 2` payloads (~180 bytes) containing `cmd`, `status`, `ctx_hash`, `ctx_stale`, `active_skill`, `summary`, `findings`, and `next_command`, omitting the 250-token `context` block whenever `ctx_stale == false`.
+- **UTF-8 File Output (`--out <filepath>`)**: Always pass `--out <filepath>` instead of PowerShell `>` or `Out-File` redirection to guarantee UTF-8 LF JSON with normalized POSIX paths (`/`).
+- **Prefix-Cache Determinism**: `docs/harness/CHECKPOINT.md` strips volatile `time_utc` timestamps and random temp paths (keeping timestamps strictly in local `.harness/checkpoint.json` and `.agent-state/journal.jsonl`), and all JSON/Markdown outputs use `sort_keys=True`.
 
-This avoids repeatedly explaining the game in each new chat. Instructions request the workflow; they do not technically prevent an agent from bypassing them.
+### 2. Built-In Mandatory Skill Activation & Anti-Drift Gate
+Before editing any `.tscn`, `.gd`, or asset file, run `python game.py plan-task "<task>" --json --compact` or read the governing skill in `.agents/skills/<skill>/SKILL.md`:
 
-## Tool calls
+| Task Domain | Governing Skill (`read_file` Before Editing) |
+| --- | --- |
+| UI / HUD / Modals / Mockups / Assets | `.agents/skills/ui-mockup-pipeline/SKILL.md` |
+| Architecture / Autoloads / Scene Wiring | `.agents/skills/core-architecture/SKILL.md` |
+| GDScript 4.x / Signals / Static Typing | `.agents/skills/gdscript-migration/SKILL.md` |
+| Testing / Captures / Baselines / QA | `.agents/skills/godot-test-qa/SKILL.md` |
+| Multi-Agent Swarm / File Leases (`lock`) | `.agents/skills/agent-coordination/SKILL.md` |
+| Context Boundaries / Bounded Line Reads | `.agents/skills/token-budget/SKILL.md` |
 
-Run these inside the installed game's root. Common --project, --godot, --timeout and --json options work before or after the command.
+`plan-task` deterministically returns `triage_category`, `required_skills`, `matched_playbooks`, `skip_graphify` (`False` only for `major` tasks), and `art_style_check` (`ask_user_art_style: True` when UI/art tasks run without a configured `art_style_direction`).
 
-~~~powershell
-python game.py info --json
-python game.py plan-task "Fix player collision" --json
-python game.py scene-outline res://scenes/Player.tscn --json
-python game.py graph --json
-python game.py graph --refresh --timeout 120 --json
-python game.py graph --query "Main.tscn" --json
-python game.py context --refresh --json
-python game.py validate --json
-python game.py validate --engine --orphans --uid --json
-python game.py audit --physics --exports --signals --perf --json
-python game.py assets res://assets/player.png --json
-python game.py assets --process res://assets/player.png --crop-alpha --scale 2 --json
-python game.py assets --grade res://assets/player.png --t1 9.0 --t2 8.5 --t3 9.0 --json
-python game.py saves --json
-python game.py baseline --save --scene res://Main.tscn --json
-python game.py baseline --check --scene res://Main.tscn --tolerance 1.0 --json
-python game.py syntax --scan . --json
-python game.py syntax --query export --json
-python game.py test --tier minor-logic --changed --json
-python game.py test --list --json
-python game.py test --json
-python game.py capture --json
-python game.py capture --scene res://Main.tscn --width 720 --height 1280 --json
-python game.py capture --scenes res://Menu.tscn res://Levels/Level01.tscn --json
-python game.py capture --all-scenes --json
-python game.py clean --audit --json
-python game.py clean --all --json
-~~~
+### 3. Style-Agnostic 5-Stage Connected UI Mockup Pipeline
+Never hardcode Cozy HD or any fixed art style. The UI pipeline adapts to any user-chosen aesthetic:
+1. **Stage 0 (Prerequisites & User Art Style Gate)**: Check `art_style_direction` in `.context/project_state.json` / `docs/art/style_guide.md`. If unset, **ask the user to define their art & UI style direction first**. Generate/export reference mockups and assets via Canva MCP (`generate-image`, `remove-background`, `create-design`, `export-design`), then check `python game.py mockup-dissect --check-prereqs --json --compact` and `python game.py assets --audit --json --compact`.
+2. **Stage 1 (Dissect & Profile)**:
+   ~~~powershell
+   python game.py mockup-dissect --scene res://scenes/ui/Hud.tscn --mockup docs/art/hud_mockup.png --json --compact --out artifacts/ui_pipeline/dissect.json
+   ~~~
+   Runs `bezel_profiler.py` (1D scanline border/bezel/lip detector) + `control_bounds_probe.gd` (headless Godot control rect & StyleBox extractor) -> writes `artifacts/ui_pipeline/dissection_manifest.json` and `manifest.json`.
+3. **Stage 2 (Scene-First `.tscn` Authoring)**: Edit `StyleBoxTexture` / `StyleBoxFlat` margins, `content_margin_*`, and containers in `.tscn` (never `Control.new()` in GDScript) -> verify via `python game.py validate --uid --json --compact`.
+4. **Stage 3 (Deterministic Grading)**:
+   ~~~powershell
+   python game.py mockup-grade --manifest artifacts/ui_pipeline/dissection_manifest.json --json --compact --out artifacts/ui_pipeline/grade.json
+   ~~~
+   Grades all `styled_controls`, margins, inner padding, sibling intersections, and stat-bar alignments until `passed: true`.
+5. **Stage 4 (Visual Capture & Baseline Diff)**:
+   ~~~powershell
+   python game.py capture --scene res://scenes/ui/Hud.tscn --json --compact --out .agent-state/capture.json
+   python game.py baseline --check --scene res://scenes/ui/Hud.tscn --json --compact --out .agent-state/baseline.json
+   ~~~
 
-info lists command-specific arguments and prerequisites from the same registrations as argparse. JSON mode returns one document with schema_version, command, status, context, summary, findings and artifacts. Logs are separate on stderr. failed/unsupported/invalid input/timeout exit nonzero. skipped means no work ran; it is not a passed test.
+### 4. Multi-Agent Advisory Leases & SHA-256 Journaling (`game.py lock`)
+- **Single-Worker Bypass**: Skip `game.py lock` when working as a single writer (`multi_agent == false`).
+- **Multi-Agent Swarm Coordination**: When `>= 2` concurrent write workers run, use `python game.py lock` (`core/tools/agent_lock.py`):
+  ~~~powershell
+  python game.py lock acquire scenes/ui/hud.tscn --agent 38flsh-med-ui --task hud-polish --json --compact
+  python game.py lock status --json --compact
+  python game.py lock write-off scenes/ui/hud.tscn --agent 38flsh-med-ui --task hud-polish --summary "Updated StyleBoxTexture margins" --json --compact
+  python game.py lock prune --json --compact
+  ~~~
+  `--agent vscode-user` claims human IDE priority over autonomous workers.
 
-Project configuration discovery runs in a scratch project and does not start target game code. Authored configuration, running engine version and effective rendering settings are distinct. Engine checks and test/capture commands execute project code and may write caches. Each engine call uses a separate user-data profile and preflights its save configuration without target autoloads; this is not a code sandbox.
+---
 
-Capture defaults to the configured main scene and effective viewport. It preserves the project renderer unless --renderer explicitly overrides it. It requires graphics support and may open a rendering window. Success requires a PNG and matching manifest; repeat/concurrent default captures have distinct artifact paths. Capture evidence is not gameplay or device acceptance.
-
-Batch capture uses --scenes for a chosen set or --all-scenes for every discovered .tscn. It renders up to three scenes concurrently, keeps selection order, and continues after individual failures. Results include each scene's PNG/manifest, batch_results.json, a clickable gallery.html, and numbered PNG sheets with up to six scenes each in three columns. Images retain their aspect ratio without cropping. Failed scenes have labeled tiles and make the command exit nonzero. Without Pillow, the HTML gallery and individual images remain available, with an explicit PNG-export limitation.
-
-Choose complete runnable scenes: isolated components may need parents, autoload state or setup data to display correctly. Each scene is captured after its initial layout/render frames; this does not automatically navigate gameplay or populate a menu. A scene path label identifies each tile, including scenes with identical filenames in different folders.
-
-## Testing strategies: Smoke, sanity, and regression testing
-
-The harness supports three progressive testing tiers (see [TESTING_GUIDE.md](docs/TESTING_GUIDE.md) and [TestingXperts Software Testing Types](https://www.testingxperts.com/blog/types-of-software-testing)):
-
-1. **Smoke Testing (Build acceptance gate)**:
-   - **Purpose**: Broad, shallow verification of project startup. Verifies Godot launches without crashing, `project.godot` loads, autoload singletons initialize, and the main scene instantiates cleanly.
-   - **When to run**: After initial setup, engine version change, or before starting new feature development.
-   - **Recipe**:
-     ~~~powershell
-     python game.py test --suite tests/test_harness_smoke.gd --json
-     python game.py capture --json
-     ~~~
-   - **Rule**: If smoke tests fail, halt development immediately and resolve the launch/autoload crash.
-
-2. **Sanity Testing (Focused feature & bug-fix check)**:
-   - **Purpose**: Narrow, deep verification of a specific modified script, scene, or bug fix. Confirms the targeted behavior is rational without executing all unrelated tests.
-   - **When to run**: Immediately after editing a script or `.tscn` scene.
-   - **Recipe**:
-     ~~~powershell
-     python game.py test --suite tests/test_specific_feature.gd --json
-     python game.py capture --scene res://screens/TargetScene.tscn --json
-     python game.py validate --engine --json
-     ~~~
-
-3. **Regression Testing (Comprehensive project verification)**:
-   - **Purpose**: Exhaustive check ensuring recent changes did not break existing features, scene layouts, scoring logic, or engine compatibility.
-   - **When to run**: Before pull requests, git commits, milestone exports, or after significant refactoring.
-   - **Recipe**:
-     ~~~powershell
-     python game.py test --json                    # all discovered test suites
-     python game.py capture --all-scenes --json     # visual UI regression check
-     python game.py validate --engine --json        # engine parse/load check
-     python game.py syntax --scan . --json          # GDScript version migration scan
-     ~~~
-   - Review `qa-evidence/batch-grid/gallery.html` and `contact_sheet_*.png` to spot visual container/anchor regressions across all scenes.
-
-## Persistent Graphify navigation
-
-The installed Graphify inspected during development did not natively parse GDScript or Godot scenes. This harness adds a source-located index for Godot function/signal/class declarations, scene nodes and explicit res:// resource references, then uses Graphify to query it. Project Python/C# files use Graphify's AST extraction; harness infrastructure is excluded from the game graph.
-
-- Freshness uses source-content and graph digests across processes.
-- Missing, stale or untracked graphs cannot be queried through the wrapper until refreshed.
-- Query output has a hard character cap; Graphify's token-budget option is a hint, not exact token accounting.
-- Dynamic paths, signal wiring, scene UID relationships, shaders and runtime behavior still need direct inspection.
-- Existing untracked or modified graph content is preserved in .harness/graph-backups before adopting the managed graph; richer semantic content is not merged into this source index.
-- Graph state persists on disk. Rules must still be tested in a real agent session; token savings have not been benchmarked.
-
-## Migration notes and learning
-
-syntax --scan provides applicable migration hints, not a GDScript compiler. validate scans policy and resource-reference hints; --engine adds native engine parsing and explicit resource-load checks. It uses existing import metadata rather than starting the editor importer. For assets/global classes needing import metadata, open the project in Godot first. Standalone editor --import hangs on this host's engine and is not counted as verified. Gameplay assertions belong in tests.
-
-Learning a syntax note does not automatically make it authoritative. An active rule needs explicit reviewed provenance, numeric version bounds and a safe matcher:
+## CLI Command Reference
 
 ~~~powershell
-python game.py syntax --learn-syntax-old "old_api()" --learn-syntax-new "new_api()" --verified --min-version 4.0 --max-version-exclusive 4.8 --matcher call --literal old_api --source-url "https://docs.godotengine.org/en/4.7/"
+python game.py plan-task "Polish HUD layout and health bar" --json --compact --out .agent-state/plan.json
+python game.py scene-outline res://scenes/Player.tscn --json --compact --out .agent-state/outline.json
+python game.py mockup-dissect --check-prereqs --json --compact
+python game.py mockup-dissect --scene res://scenes/ui/Hud.tscn --mockup docs/art/mockup.png --json --compact --out artifacts/ui_pipeline/dissect.json
+python game.py mockup-grade --manifest artifacts/ui_pipeline/dissection_manifest.json --json --compact --out artifacts/ui_pipeline/grade.json
+python game.py lock status --json --compact
+python game.py graph --json --compact
+python game.py graph --refresh --timeout 120 --json --compact
+python game.py graph --query "Main.tscn" --json --compact
+python game.py validate --engine --orphans --uid --json --compact --out .agent-state/validate.json
+python game.py audit --physics --exports --signals --perf --json --compact --out .agent-state/audit.json
+python game.py assets res://assets/player.png --json --compact
+python game.py assets --process res://assets/player.png --crop-alpha --scale 2 --json --compact
+python game.py assets --grade res://assets/player.png --t1 9.0 --t2 8.5 --t3 9.0 --json --compact
+python game.py baseline --save --scene res://Main.tscn --json --compact
+python game.py baseline --check --scene res://Main.tscn --tolerance 1.0 --json --compact
+python game.py syntax --scan . --json --compact
+python game.py test --tier minor-logic --changed --json --compact --out .agent-state/test.json
+python game.py capture --scene res://Main.tscn --json --compact --out .agent-state/capture.json
+python game.py clean --audit --json --compact
+python game.py clean --all --json --compact
 ~~~
 
-That example illustrates the contract; do not add invented API rules to a real project. Matchers are escaped token/call/annotation patterns; arbitrary learned regex/code is not executed. Conflicting updates fail, writes are atomic, and concurrent learning uses an exclusive lock. Unverified/versionless legacy entries remain queryable notes.
+---
 
-## Verification and limits
+## Verification
+
+Run the automated unit and engine integration test suite:
 
 ~~~powershell
-python -m unittest discover -s tests -p "test_*.py"
+python -m unittest discover -s tests -v
 ~~~
-
-Core development was checked on Windows with Python 3.12, Godot 4.7.2 and the installed Graphify. Unit tests cover version fixtures; they do not prove runtime compatibility with other engines. Integration tests use disposable games, real engine/capture checks, reviewed setup, Graphify queries and fresh-process persistence.
-
-Real Antigravity and VS Code agent-session compliance, Linux execution, additional real Godot versions and dependency installation over the network remain acceptance checks. Engine execution is explicitly unavailable on macOS/other platforms until an appropriate isolated profile is implemented; metadata discovery remains available. See [verification evidence](docs/VERIFICATION.md), [implementation plan](tasks/plan.md) and [checklist](tasks/todo.md).
-
-The original copy/paste bootstrap is now a [review-first agent prompt](Godot_Dynamic_Harness_Prompt.txt). No bulk skill-library installation, destructive skill pruning, MCP server or live-editor controller is included.
-
-## Official references
-
-- [Godot command-line tools](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html)
-- [Godot project settings](https://docs.godotengine.org/en/stable/classes/class_projectsettings.html)
-- [Antigravity persistent workspace rules](https://www.antigravity.google/docs/rules/)
-- [VS Code repository instructions](https://code.visualstudio.com/docs/agent-customization/custom-instructions)
 
 ## License
 

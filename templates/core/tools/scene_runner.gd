@@ -26,7 +26,7 @@ func _initialize() -> void:
 		Engine.max_fps = fixed_fps
 
 	if output_dir.is_empty():
-		output_dir = "res://screenshots/debug"
+		output_dir = "res://tests/screenshots"
 	if req_width <= 0:
 		req_width = int(ProjectSettings.get_setting_with_override("display/window/size/viewport_width"))
 	if req_height <= 0:
