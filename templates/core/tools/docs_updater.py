@@ -10,6 +10,13 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+# Emoji in output crashes the Windows cp1252 console; force UTF-8 first.
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 JSON_LOG = Path(__file__).resolve().parent / "gdscript_version_changes.json"
 # Mask comments and strings while preserving newlines and therefore finding locations.
 NON_CODE = re.compile(r'(["\'])\1\1[\s\S]*?\1\1\1|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|#[^\n]*')
